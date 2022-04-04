@@ -13,9 +13,9 @@ using TodoListService.AuthorizationPolicies;
 
 namespace TodoListService
 {
-    public class Startup
+    public class StartupBlazorServerAADClientCallWebAPI
     {
-        public Startup(IConfiguration configuration)
+        public StartupBlazorServerAADClientCallWebAPI(IConfiguration configuration)
         {
             Configuration = configuration;
         }

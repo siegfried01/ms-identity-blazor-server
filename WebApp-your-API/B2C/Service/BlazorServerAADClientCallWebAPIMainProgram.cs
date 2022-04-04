@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace TodoListService
 {
-    public class Program
+    public class BlazorServerAADClientCallWebAPIMainProgram
     {
         public static void Main(string[] args)
         {
@@ -17,7 +17,7 @@ namespace TodoListService
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.UseStartup<StartupBlazorServerAADClientCallWebAPI>();
                 });
     }
 }

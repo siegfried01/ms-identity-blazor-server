@@ -1,0 +1,25 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clientSecret": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/aksbicep02/providers/Microsoft.KeyVault/vaults/aksbicep02SH0001"
+                },
+                "secretName": "ClientSecret"
+            }
+        },  
+        "aadb2cConfig" : {
+            "value": {
+                "Instance": "https://enterprisedemoorg.b2clogin.com",
+                "ClientId": "970c1b5d-be8f-46c1-9189-0adadd21dc31",
+                "Domain": "enterprisedemoorg.onmicrosoft.com",
+                "SignedOutCallbackPath": "/signout/B2C_1_susi",
+                "SignUpSignInPolicyId": "b2c_1_susi",
+                "ResetPasswordPolicyId": "b2c_1_reset",
+                "EditProfilePolicyId": "b2c_1_edit_profile"
+            }
+        }
+    }
+}
