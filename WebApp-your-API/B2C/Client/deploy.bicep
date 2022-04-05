@@ -3,16 +3,22 @@
  * $name='AADB2C_BlazorServerDemo'
  * $rg="rg_$name"
  * $loc='westus2'
+ * echo az.cmd group create --location $loc --resource-group $rg 
  * az.cmd group create --location $loc --resource-group $rg 
- * Set-AzDefault -ResourceGroupName $rg 
+ * echo Set-AzDefault -ResourceGroupName $rg 
+ * Set-AzDefault -ResourceGroupName $rg
+ * echo begin create deployment group
  * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep   --parameters '@deploy.parameters.json' --parameters ownerId=$env:AZURE_OBJECTID
+ * echo end create deployment group
  * End commands to execute this file using Azure CLI with Powershell
  *
  * Begin commands to execute this file using Azure CLI with PowerShell
  * $name='AADB2C_BlazorServerDemo'
  * $rg="rg_$name"
  * $loc='westus2'
+ * echo az.cmd group delete --name $rg --yes
  * az.cmd group delete --name $rg --yes
+ * echo all done
  * End commands to execute this file using Azure CLI with Powershell
  */
 
@@ -29,6 +35,11 @@ param aadb2cConfig object
 @description('Azure AD B2C App Registration client secret')
 @secure()
 param clientSecret string
+
+@description('Azure AD B2C App CosmosConnectionString')
+@secure()
+param cosmosConnectionString string=newGuid()
+
 
 @description('The web site hosting plan')
 @allowed([
@@ -79,6 +90,16 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
       value: '{"uri":"${kvaadb2cSecret.properties.secretUri}"}'
     }
   }
+
+  resource cosmosConnectionStringSecret 'keyValues@2020-07-01-preview' = {
+    // Store secrets in Key Vault with a reference to them in App Configuration e.g., client secrets, connection strings, etc.
+    name: 'CosmosConnectionStringSecret'
+    properties: {
+      // Most often you will want to reference a secret without the version so the current value is always retrieved.
+      contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+      value: '{"uri":"${kvCosmosConnectionStringSecret.properties.secretUri}"}'
+    }
+  }
 }
 
 resource kv 'Microsoft.KeyVault/vaults@2019-09-01' = {
@@ -122,6 +143,14 @@ resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' = {
     value: clientSecret
   }
 }
+
+resource kvCosmosConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' = {
+  name: '${kv.name}/CosmosConnectionStringSecret'
+  properties: {
+    value: cosmosConnectionString
+  }
+}
+
 
 resource plan 'Microsoft.Web/serverfarms@2020-12-01' = {
   name: '${name}plan'

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace TodoListService
 {
-    public class BlazorServerAADClientCallWebAPIMainProgram
+    public class WebAPIServiceMainProgram
     {
         public static void Main(string[] args)
         {

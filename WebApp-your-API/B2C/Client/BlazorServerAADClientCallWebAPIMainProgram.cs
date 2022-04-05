@@ -16,7 +16,7 @@ namespace blazorserver_client
     // dotnet add package JObject
     // dotnet add package Newtonsoft.Json
     
-    public class Program
+    public class BlazorServerAADClientCallWebAPIMainProgram
     {
         public static void Main(string[] args)
         {
@@ -40,7 +40,7 @@ namespace blazorserver_client
                             });
                         });
                     })
-                    .UseStartup<Startup>();
+                    .UseStartup<StartupBlazorServerAADClientCallWebAPI>();
                 });
         private static string FetchConnectionStringFromSecrets_json(string csprojDirectory)
         {

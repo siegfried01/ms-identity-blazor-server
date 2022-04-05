@@ -11,9 +11,9 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace blazorserver_client
 {
-    public class Startup
+    public class StartupBlazorServerAADClientCallWebAPI
     {
-        public Startup(IConfiguration configuration)
+        public StartupBlazorServerAADClientCallWebAPI(IConfiguration configuration)
         {
             Configuration = configuration;
         }
