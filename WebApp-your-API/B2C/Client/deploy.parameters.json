@@ -9,7 +9,29 @@
                 },
                 "secretName": "ClientSecret"
             }
-        },  
+        },
+        "cosmosEndPoint": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/aksbicep02/providers/Microsoft.KeyVault/vaults/aksbicep02SH0001"
+                },
+                "secretName": "COSMOS-ENDPOINT"
+            }
+        },
+        "cosmosAccountKey": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/aksbicep02/providers/Microsoft.KeyVault/vaults/aksbicep02SH0001"
+                },
+                "secretName": "COSMOS-ACCOUNTKEY"
+            }
+        },
+        "cosmosConfig" : {
+            "value" : {
+                "containerName": "data",
+                "dbName": "rbacsample"
+            }
+        },
         "aadb2cConfig" : {
             "value": {
                 "Instance": "https://enterprisedemoorg.b2clogin.com",
