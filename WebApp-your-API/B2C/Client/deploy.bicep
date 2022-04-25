@@ -14,6 +14,24 @@
  * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
  * write-output "principalId=${MI_PRINID}"
  * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
+ * $accountName="cosmos-xyfolxgnipoog"
+ * $webappname="xyfolxgnipoogweb" 
+ * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
+ * echo $appId
+ * $accountName="cosmos-xyfolxgnipoog"
+ * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
+ *     -ResourceGroupName $rg `
+ *     -Type CustomRole -RoleName SiegReadWriteRole007 `
+ *     -DataAction @( `
+ *         'Microsoft.DocumentDB/databaseAccounts/readMetadata',
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*') `
+ *     -AssignableScope "/"
+ * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
+ * echo idRole=$idRole
+ * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
+ * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
+ * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
  * Get-AzResource -ResourceGroupName $rg | ft
  * echo end create deployment group
  * End commands to execute this file using Azure CLI with Powershell
