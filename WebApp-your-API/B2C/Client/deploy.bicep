@@ -55,7 +55,7 @@
  */
 
  @description('Are we using VNET to protect database?')
- param useVNET bool = false
+ param useVNET bool = true
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -125,8 +125,8 @@ param cosmosAccountName string = 'cosmos-${uniqueString(resourceGroup().id)}'
 ])
 param publicNetworkAccess string = 'Enabled'
 
-//@description('Private endpoint name')
-//param privateEndpointName string='cosmosPrivateEndpoint'
+@description('Private endpoint name')
+param privateEndpointName string='cosmosPrivateEndpoint'
 
 var subnetName = 'default'
 
@@ -436,7 +436,10 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 //   }
 // }
 
-
+// Access from azure webapp to cosmos DB was working via RBAC and then added AnuragSharma-MSFT's script to constrain access cosmos database via VNET.
+// New error message: 2022 April 25 22:59:57.1890 (Mon): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47; Reason: (Request originated from IP 20.69.64.79 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
+// Perhaps the problem is that I'm not including the VNET? How do I do that?
+//
 // begin VNET resources
 resource virtualNetworkName_resource 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNET) {
   name: virtualNetworkName
@@ -458,7 +461,7 @@ resource virtualNetworkName_resource 'Microsoft.Network/virtualNetworks@2020-06-
     ]
   }
 }
-/*
+
 resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNET) {
   name: privateEndpointName
   location: location
@@ -479,5 +482,5 @@ resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-0
     ]
   }
 }
-*/
+
 // end VNET resources
