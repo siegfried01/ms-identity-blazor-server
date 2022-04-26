@@ -55,7 +55,7 @@
  */
 
  @description('Are we using VNET to protect database?')
- param useVNET bool = true
+ param useVNET bool = false
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -100,7 +100,7 @@ param cosmosEndPoint string
   'P3'
   'P4'
 ])
-param sku string = 'B1'
+param sku string = 'F1'
 
 @description('The App Configuration SKU. Only "standard" supports customer-managed keys from Key Vault')
 @allowed([
