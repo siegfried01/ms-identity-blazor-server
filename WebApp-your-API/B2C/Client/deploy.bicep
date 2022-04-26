@@ -100,7 +100,7 @@ param cosmosEndPoint string
   'P3'
   'P4'
 ])
-param sku string = 'F1'
+param sku string = 'B1'
 
 @description('The App Configuration SKU. Only "standard" supports customer-managed keys from Key Vault')
 @allowed([
@@ -308,8 +308,9 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
     }
   }
   properties: {
-    httpsOnly: true
-    serverFarmId: plan.id
+    httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
+    serverFarmId: plan.id   // it should look like /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/virtualNetworks/{vnetName}/subnets/{subnetName}
+  //  virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName_resource.name}/subnets/${subnetName}'
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -365,6 +366,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2021-06-15' = {
     enableMultipleWriteLocations: false
   }
 }
+
 // Cosmos DB
 resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2021-06-15' = {
   name: '${cosmosDbAccount.name}/${dbName}'
@@ -438,9 +440,22 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 
 // Access from azure webapp to cosmos DB was working via RBAC and then added AnuragSharma-MSFT's script to constrain access cosmos database via VNET.
 // New error message: 2022 April 25 22:59:57.1890 (Mon): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47; Reason: (Request originated from IP 20.69.64.79 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
+//                    2022 April 26 01:35:06.7308 (Tue): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 84239951-6e27-4e84-b08f-4e0d5f5c97d6; Reason: (Request originated from IP 20.72.222.133 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 84239951-6e27-4e84-b08f-4e0d5f5c97d6, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
 // Perhaps the problem is that I'm not including the VNET? How do I do that?
 //
 // begin VNET resources
+
+// https://purple.telstra.com/blog/deploying-azure-app-service-regional-vnet-integration
+/*
+resource webNetworkConfig 'Microsoft.Web/sites/networkConfig@2021-03-01' = if (useVNET) {
+  parent: web
+  name:  '${web.name}/VirtualNetwork'
+  properties:{
+    subnetResourceId: virtualNetworkName_resource.properties.subnets[0].id
+    swiftSupported: true
+  }
+}
+*/
 resource virtualNetworkName_resource 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNET) {
   name: virtualNetworkName
   location: location
