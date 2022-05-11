@@ -55,7 +55,7 @@
  */
 
  @description('Are we using VNET to protect database?')
- param useVNET bool = true
+ param useVNET bool = false
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -100,7 +100,8 @@ param cosmosEndPoint string
   'P3'
   'P4'
 ])
-param sku string = 'B1'
+param webPlanSku string = 'F1'
+
 
 @description('The App Configuration SKU. Only "standard" supports customer-managed keys from Key Vault')
 @allowed([
@@ -108,6 +109,7 @@ param sku string = 'B1'
   'standard'
 ])
 param configSku string = 'free'
+
 
 // begin VNET params
 @description('Virtual network name')
@@ -159,15 +161,6 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
       value:  cosmosDbAccount.properties.documentEndpoint
     }
   }
-/*
-  resource cosmosFQDN 'keyValues@2020-07-01-preview'= if (useVNET) {
-    name: 'CosmosConfig:fqdn'
-    properties: {
-      value:  privateEndpointName_resource.properties.subnet.name
-    }
-  }
-*/
-
 
   resource aadb2cClientSecret 'keyValues@2020-07-01-preview' = {
     // Store secrets in Key Vault with a reference to them in App Configuration e.g., client secrets, connection strings, etc.
@@ -284,7 +277,7 @@ resource plan 'Microsoft.Web/serverfarms@2020-12-01' = {
   name: '${name}plan'
   location: location
   sku: {
-    name: sku
+    name: webPlanSku
   }
   kind: 'linux'
   properties: {
@@ -331,7 +324,11 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
       ]
     }
   }
+
+
 }
+
+
 
 output appConfigConnectionString string = listKeys(config.id, config.apiVersion).value[0].connectionString
 // output siteUrl string = 'https://${web.properties.defaultHostName}/'
@@ -397,6 +394,7 @@ var principals =   [
   principalId
   ownerId
 ]
+
 @batchSize(1)
 module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
   name: 'cosmos-role-definition-and-assignment-${jj}'
@@ -408,35 +406,7 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
     it: jj
   }
 }]
-// var roleDefId = guid('sql-role-definition-', principalId, cosmosDbAccount.id)
-// var roleDefName = 'Custom Read/Write role'
-// var roleAssignId = guid(roleDefId, principalId, cosmosDbAccount.id)
-// resource roleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2021-06-15' = {
-//   name: '${cosmosDbAccount.name}/${roleDefId}'
-//   properties: {
-//     roleName: roleDefName
-//     type: 'CustomRole'
-//     assignableScopes: [
-//       cosmosDbAccount.id
-//     ]
-//     permissions: [
-//       {
-//         dataActions: [
-//           'Microsoft.DocumentDB/databaseAccounts/readMetadata'
-//           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
-//         ]
-//       }
-//     ]
-//   }
-// }
-// resource roleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2021-06-15' = {
-//   name: '${cosmosDbAccount.name}/${roleAssignId}'
-//   properties: {
-//     roleDefinitionId: roleDefinition.id
-//     principalId: principalId
-//     scope: cosmosDbAccount.id
-//   }
-// }
+
 
 // Access from azure webapp to cosmos DB was working via RBAC and then added AnuragSharma-MSFT's script to constrain access cosmos database via VNET.
 // New error message: 2022 April 25 22:59:57.1890 (Mon): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47; Reason: (Request originated from IP 20.69.64.79 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
@@ -445,17 +415,6 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 //
 // begin VNET resources
 
-// https://purple.telstra.com/blog/deploying-azure-app-service-regional-vnet-integration
-/*
-resource webNetworkConfig 'Microsoft.Web/sites/networkConfig@2021-03-01' = if (useVNET) {
-  parent: web
-  name:  '${web.name}/VirtualNetwork'
-  properties:{
-    subnetResourceId: virtualNetworkName_resource.properties.subnets[0].id
-    swiftSupported: true
-  }
-}
-*/
 resource virtualNetworkName_resource 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNET) {
   name: virtualNetworkName
   location: location

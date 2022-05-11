@@ -10,10 +10,7 @@
  * echo Set-AzDefault -ResourceGroupName $rg 
  * Set-AzDefault -ResourceGroupName $rg
  * echo begin create deployment group
- * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc
- * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
- * write-output "principalId=${MI_PRINID}"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file RyanCHillPureBicepMain200428.bicep  --parameters '@deploy.parameters.json' --parameters ownerId=$env:AZURE_OBJECTID
  * $accountName="cosmos-xyfolxgnipoog"
  * $webappname="xyfolxgnipoogweb" 
  * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
@@ -55,12 +52,33 @@
  */
 
 
+@description('AAD Object ID of the developer so s/he can access key vault when running on development')
+param ownerId string
+ 
 @description('Application Name')
 @maxLength(30)
 param applicationName string = 'todoapp-${uniqueString(resourceGroup().id)}'
 
 @description('Location for all resources.')
 param location string = resourceGroup().location
+
+@description('Cosmos DB Configuration [{key:"", value:""}]')
+param cosmosConfig object
+@description('Azure AD B2C Configuration [{key:"", value:""}]')
+param aadb2cConfig object
+
+@description('Azure AD B2C App Registration client secret')
+@secure()
+param clientSecret string
+
+@description('Azure AD B2C App Cosmos Account Key')
+@secure()
+param cosmosAccountKey string
+
+@description('Azure AD B2C App Cosmos End Point')
+@secure()
+param cosmosEndPoint string
+
 
 @allowed([
   'windows'
@@ -105,13 +123,13 @@ param repoUrl string = ''
 @description('The branch of the GitHub repository to use.')
 param branch string = 'main'
 
-param useRoleDefinitions bool = false
+param useRoleDefinitions bool = true
 
-var cosmosAccountName = toLower(applicationName)
-var websiteName = applicationName
-var hostingPlanName = applicationName
-var keyvaultName = applicationName
-var appConfigName = applicationName
+var cosmosAccountName = '${toLower(applicationName)}-db'
+var websiteName = '${applicationName}-web'
+var hostingPlanName = '${applicationName}-plan'
+var keyvaultName = '${applicationName}-kv'
+var appConfigName = '${applicationName}-cfg'
 
 // Use built-in roles https://docs.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#azure-built-in-roles-for-key-vault-data-plane-operations
 var keyVaultSecretsUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
@@ -176,6 +194,15 @@ resource kvAccessPolicies 'Microsoft.KeyVault/vaults/accessPolicies@2021-10-01' 
     accessPolicies: [
       {
         tenantId: subscription().tenantId
+        objectId: ownerId
+        permissions:{
+          secrets:[
+            'all'
+          ]
+        }
+      }
+      {
+        tenantId: subscription().tenantId
         objectId: website.identity.principalId
         permissions: {
           secrets: [
@@ -186,12 +213,38 @@ resource kvAccessPolicies 'Microsoft.KeyVault/vaults/accessPolicies@2021-10-01' 
     ]
   }
 }
+resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' = {
+  name: '${kv.name}/AzureAdB2CClientSecret'
+  properties: {
+    value: clientSecret
+  }
+}
 
 resource appConfig 'Microsoft.AppConfiguration/configurationStores@2021-10-01-preview' = {
   name: appConfigName
   location: location
   sku: {
     name: configSku
+  }
+
+  resource Aadb2cConfigValues 'keyValues@2020-07-01-preview' = [for item in items(aadb2cConfig): {
+    name: 'AzureAdB2C:${item.key}'
+    properties: {
+      value: item.value
+    }
+  }]
+  resource CosmosConfigValues 'keyValues@2020-07-01-preview' = [for item in items(cosmosConfig): {
+    name: 'CosmosConfig:${item.key}'
+    properties: {
+      value: item.value
+    }
+  }]
+
+  resource cosmosUri 'keyValues@2020-07-01-preview'={
+    name: 'CosmosConfig:uri'
+    properties: {
+      value:  cosmosAccount.properties.documentEndpoint
+    }
   }
 
   resource cosmosDbAccountConfigValue 'keyValues' = {
@@ -223,6 +276,34 @@ resource appConfig 'Microsoft.AppConfiguration/configurationStores@2021-10-01-pr
       value: containerName
     }
   }
+
+  resource aadb2cClientSecret 'keyValues@2020-07-01-preview' = {
+    // Store secrets in Key Vault with a reference to them in App Configuration e.g., client secrets, connection strings, etc.
+    name: 'AzureAdB2C:ClientSecret'
+    properties: {
+      // Most often you will want to reference a secret without the version so the current value is always retrieved.
+      contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+      value: '{"uri":"${kvaadb2cSecret.properties.secretUri}"}'
+    }
+  }
+  resource cosmosAccountKeySecret 'keyValues@2020-07-01-preview' = {
+    // Store secrets in Key Vault with a reference to them in App Configuration e.g., client secrets, connection strings, etc.
+    name: 'CosmosAccountKeySecret'
+    properties: {
+      // Most often you will want to reference a secret without the version so the current value is always retrieved.
+      contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+      value: '{"uri":"${kvCosmosAccountKeySecret.properties.secretUri}"}'
+    }
+  }
+  resource cosmosEndPointSecret 'keyValues@2020-07-01-preview' = {
+    // Store secrets in Key Vault with a reference to them in App Configuration e.g., client secrets, connection strings, etc.
+    name: 'CosmosEndPointSecret'
+    properties: {
+      // Most often you will want to reference a secret without the version so the current value is always retrieved.
+      contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+      value: '{"uri":"${kvCosmosEndPointSecret.properties.secretUri}"}'
+    }
+  }
 }
 
 resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
@@ -250,7 +331,7 @@ resource website 'Microsoft.Web/sites@2021-03-01' = {
           type: 'Custom'
         }
       ]
-      linuxFxVersion: 'DOTNETCORE|6.0'
+      linuxFxVersion: 'DOTNETCORE|Latest'
     }
   }
 
