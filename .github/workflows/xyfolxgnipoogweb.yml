@@ -20,7 +20,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
     - name: Restore
-      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+      run:
+        echo working dir = "${{ env.WORKING_DIRECTORY }}" configuration = ${{ env.CONFIGURATION }} begin build
+        dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Build
       run:
         echo working dir = "${{ env.WORKING_DIRECTORY }}" configuration = ${{ env.CONFIGURATION }} begin build
