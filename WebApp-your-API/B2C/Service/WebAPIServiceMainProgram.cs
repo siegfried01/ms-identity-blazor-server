@@ -3,6 +3,7 @@
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using static System.Console;
 
 namespace TodoListService
 {
@@ -10,6 +11,7 @@ namespace TodoListService
     {
         public static void Main(string[] args)
         {
+            WriteLine($"Starting {nameof(WebAPIServiceMainProgram)}");
             CreateHostBuilder(args).Build().Run();
         }
 
