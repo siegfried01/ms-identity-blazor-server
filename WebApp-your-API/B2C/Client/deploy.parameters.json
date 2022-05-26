@@ -2,12 +2,28 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "dockerhubPassword":{
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/aksbicep02/providers/Microsoft.KeyVault/vaults/aksbicep02SH0001"
+                },
+                "secretName": "dockerhubPassword"
+            }
+        },
         "clientSecret": {
             "reference": {
                 "keyVault": {
                     "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/aksbicep02/providers/Microsoft.KeyVault/vaults/aksbicep02SH0001"
                 },
                 "secretName": "ClientSecret"
+            }
+        },
+        "azureSqlServerAdminPassword":{
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/aksbicep02/providers/Microsoft.KeyVault/vaults/aksbicep02SH0001"
+                },
+                "secretName": "azureSqlServerAdminPassword"
             }
         },
         "cosmosEndPoint": {

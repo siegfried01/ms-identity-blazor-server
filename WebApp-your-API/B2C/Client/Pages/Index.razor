@@ -1,38 +1,147 @@
 ﻿@page "/"
 @using Azure.Identity
 @using Microsoft.Azure.Cosmos
+@using Microsoft.Data.SqlClient
 @using Microsoft.Extensions.Configuration
+@using static System.Console
+@using Azure.Core
 
 @inject IConfiguration Configuration
-
+<h1>Date Time: @DateTime.Now.ToString("dddd MMMM dd, yyyy hh:mm:ss.ffff tt (zzz)")</h1>
 <UserClaims />
 <hr />
-cosmos URI = @Configuration.GetSection("cosmosConfig")["uri"] = @Configuration["cosmosConfig:uri"]
-<table>
-    <tr><td><button @onclick="WriteToCosmosUsingManagedIdentity">Write to Cosmos Using Managed Idenity</button></td><td><div style="border:double">@status</div></td></tr>
+<!-- cosmos URI = @Configuration.GetSection("cosmosConfig")["uri"] = @Configuration["cosmosConfig:uri"] -->
+
+<table border="1">
+    <tr><td rowspan="2" colspan="2"><label>Value <input @bind="value"/></label></td><td><button @onclick="WriteToCosmosUsingManagedIdentity">Write to Cosmos Using Managed Identity</button></td><td><div style="border:double">@cosmosStatus</div></td></tr>
+    <tr><td><button @onclick="WriteToAzureSQLUsingManagedIdentity">Write to Azure SQL using Managed Identity</button> </td><td><div style="border:double">@azureSQLStatusManagedIdentity</div></td></tr>
+    <tr><td><label>admin username:</label><input @bind="adminUsername"/></td><td><label>admin password: <input type="password" @bind="adminPassword" /></label></td><td><button @onclick="WriteToAzureSQLUsingAdminUsernamePassword">Write to Azure SQL using Admin & Password</button> </td><td><div style="border:double">@azureSQLStatusUsernamePassword</div></td></tr>
+</table>
+<h1>results</h1>
+<table border="1">
+    @foreach(var r in rows)
+    {
+        <tr>
+            <td>@r.id</td>
+            <td>@r.name</td>
+            <td>@r.dateTime</td>
+        </tr>
+    }
 </table>
 
 @code
 {
-    string status = "Normal";
+    class Rows
+    {
+        public int id;
+        public string name;
+        public DateTime dateTime;
+    }
+    List<Rows> rows = new List<Rows>();
+    string cosmosStatus = "Normal";
+    string azureSQLStatusUsernamePassword = "Normal";
+    string azureSQLStatusManagedIdentity = "Normal";
+    string adminPassword = "";
+    string adminUsername = "";
+    string value { get; set; } = "Siegfried Heintze";
+    string increment(string value)
+    {
+        var regx = new System.Text.RegularExpressions.Regex(@"(\d)+");
+        var match = regx.Match(value);
+        if (match.Success)
+        {
+            var n = int.Parse(match.Value) + 1;
+            value = value.Replace(match.Value, n.ToString());
+        }
+        return value;
+    }
+    async Task UpdateResults(SqlConnection connection)
+    {
+        using (var command = new SqlCommand("delete FROM test WHERE (id in (select top 1 id from test order by id))", connection))
+        {
+            await command.ExecuteNonQueryAsync();
+        }
+        using var query = new SqlCommand("SELECT * FROM [dbo].[test]", connection);
+        using var reader = await query.ExecuteReaderAsync();
+        rows = new List<Rows>();
+        while (await reader.ReadAsync())
+        {
+            rows.Add(new Rows { id = reader.GetInt32(0), name = reader.GetString(1), dateTime = reader.GetDateTime(2) });
+        }
+    }
+    async Task WriteToAzureSQLUsingAdminUsernamePassword()
+    {
+        // https://www.techwatching.dev/posts/sqlclient-active-directory-authent
+        var now = DateTime.Now;
+        var nowString = now.ToString("yyyy MMMM dd HH:mm:ss.ffff (ddd)");
+        try
+        {
+            //var accessToken = await new DefaultAzureCredential().GetTokenAsync(new TokenRequestContext(new string[] { "https://database.windows.net//.default" }));
+            // using var connection = new SqlConnection($"Server=tcp:rbac-demo-server.database.windows.net,1433;Database=rbacdemoDatabase;" );
+            using var connection = new SqlConnection($"Server=tcp:rbac-demo-server.database.windows.net,1433;Database=rbacdemoDatabase;User Id=serverAdmin;Password={adminPassword};");
+            //{   AccessToken = accessToken.Token  };
+            // Login failed for user ''.
+            await connection.OpenAsync(); // Login failed for user '<token-identified principal>'.
+            value = increment(value);
+            using (var command = new SqlCommand($"INSERT INTO [dbo].[test] ([name]) VALUES ('{value}')", connection)){
+                //command.Parameters.AddWithValue("@Value", value);
+                await command.ExecuteNonQueryAsync();
+                azureSQLStatusUsernamePassword = "Success " + nowString;
+            }
+            await UpdateResults(connection);
+        }
+        catch (Exception ex)
+        {
+            azureSQLStatusUsernamePassword = $"Failure ({nowString}): {ex.Message}";
+        }
+    }
+    async Task WriteToAzureSQLUsingManagedIdentity()
+    {
+        // Login failed for user '<token-identified principal>'.
+        // Login failed for user '<token-identified principal>'.
+        // https://www.techwatching.dev/posts/sqlclient-active-directory-authent
+        var now = DateTime.Now;
+        var nowString = now.ToString("yyyy MMMM dd HH:mm:ss.ffff (ddd)");
+        try
+        {   
+            using var connection = new SqlConnection($"Server=tcp:rbac-demo-server.database.windows.net,1433;Authentication=Active Directory Default;Database=rbacdemoDatabase;" );
+            await connection.OpenAsync(); // Login failed for user '<token-identified principal>'.
+            value = increment(value);
+            SqlCommand command = new SqlCommand($"INSERT INTO [dbo].[test] ([name]) VALUES ('{value}')", connection);
+            await command.ExecuteNonQueryAsync();
+            azureSQLStatusManagedIdentity = "Success "+nowString;
+            await UpdateResults(connection);
+        }
+        catch (Exception ex)
+        {
+            azureSQLStatusManagedIdentity = $"Failure ({nowString}): {ex.Message}";
+        }
+    }
     async Task WriteToCosmosUsingManagedIdentity()
     {
-        var now = DateTime.Now.ToString("yyyy MMMM dd HH:mm:ss.ffff (ddd)");
+        var now = DateTime.Now;
+        var nowString = now.ToString("yyyy MMMM dd HH:mm:ss.ffff (ddd)");
         var credential = new DefaultAzureCredential();
 
         var cosmosClient = new CosmosClient(Configuration["CosmosConfig:uri"], credential);
         var container = cosmosClient.GetContainer(Configuration["CosmosConfig:dbName"], Configuration["CosmosConfig:containerName"]);
-
+        value = increment(value);
         var newId = Guid.NewGuid().ToString();
         try
         {
-            await container.CreateItemAsync(new { id = newId, partitionKey = newId, name = "Siegfried Heintze" },
+            await container.CreateItemAsync(new { id = newId, partitionKey = newId, name = value },
             new PartitionKey(newId)/*, cancellationToken: stoppingToken*/);
-            status = "Success " + now;
+            cosmosStatus = "Success: completed= " + nowString + " elapse=" + elapse(now);
+            WriteLine($"wrote to Cosmos: {cosmosStatus} name={value} id={newId}");
         }
         catch (Exception ex)
         {
-            status = now + ":  " + ex.Message;
+            cosmosStatus = ""+ nowString + $" (elapse={elapse(now)}):  Failure=" + ex.Message;
+            WriteLine($"failed to write to Cosmos: {cosmosStatus} name={value} id={newId}");
+        }
+        string elapse(DateTime start)
+        {
+            return (DateTime.Now - start).ToString("hh\\:mm\\:ss\\.ffff");
         }
     }
 }
