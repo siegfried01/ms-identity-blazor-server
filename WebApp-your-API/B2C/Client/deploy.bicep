@@ -443,6 +443,7 @@ resource containerData 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/conta
 var principals =   [ 
   principalId
   ownerId
+  // web.identity.principalId
 ]
 
 @batchSize(1)
