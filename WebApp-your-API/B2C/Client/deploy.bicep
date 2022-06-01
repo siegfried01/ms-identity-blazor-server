@@ -60,7 +60,8 @@
  param azureSqlServerAdminPassword string
 
  @description('Are we using VNET to protect database?')
- param useVNET bool = true
+ param useVNet1 bool = true
+ param useVNet2 bool = false
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -105,7 +106,7 @@ param cosmosEndPoint string
   'P3'
   'P4'
 ])
-param webPlanSku string = useVNET?'S1':'F1'
+param webPlanSku string = useVNet1?'S1':'F1'
 
 @description('The App Configuration SKU. Only "standard" supports customer-managed keys from Key Vault')
 @allowed([
@@ -136,6 +137,7 @@ param privateEndpointName string='cosmosPrivateEndpoint'
 
 param subnetCosmos string = 'subnetCosmos'
 param subnetWebsite string = 'subnetWebsite'
+param virtualNetworks_vnet_xyfolxgnipoog_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}'
 
 param privateDnsZones_dns_aadb2c_blazorserverdemo_name string = 'dns_aadb2c.blazorserverdemo'
 param virtualLinkName string = 'vnetlink001'
@@ -306,6 +308,42 @@ param managedIdentityName string
 resource msi 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30'  existing = {
   name: managedIdentityName
 }
+
+/*
+virtualNetworkSubnetId (see below in resource webApp) is causing this error:
+
+ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{
+  "Code": "BadRequest",
+  "Message": "Subnet vnet-xyfolxgnipoog in VNET subnetWebsite is missing a delegation to Microsoft.Web/serverFarms. Please add the delegation and try again.",
+  "Target": null,
+  "Details": [
+    {
+      "Message": "Subnet vnet-xyfolxgnipoog in VNET subnetWebsite is missing a delegation to Microsoft.Web/serverFarms. Please add the delegation and try again."
+    },
+    {
+      "Code": "BadRequest"
+    },
+    {
+      "ErrorEntity": {
+        "ExtendedCode": "55928",
+        "MessageTemplate": "Subnet {0} in VNET {1} is missing a delegation to {2}. Please add the delegation and try again.",
+        "Parameters": [
+          "vnet-xyfolxgnipoog",
+          "subnetWebsite",
+          "Microsoft.Web/serverFarms"
+        ],
+        "Code": "BadRequest",
+        "Message": "Subnet vnet-xyfolxgnipoog in VNET subnetWebsite is missing a delegation to Microsoft.Web/serverFarms. Please add the delegation and try again."
+      }
+    }
+  ],
+  "Innererror": null
+}"}]}}
+
+
+*/
+
+
 // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/web-app-managed-identity-sql-db/main.bicep#L73
 resource web 'Microsoft.Web/sites@2020-12-01' = {
   name: '${name}web'
@@ -318,11 +356,12 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   }
   properties: {
     httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
-    serverFarmId: plan.id   // it should look like /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/virtualNetworks/{vnetName}/subnets/{subnetName}
-  //  virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetName}'
+    serverFarmId: plan.id   
     // This does the VNET integration for S1
-     virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
+     //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
      // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
+
+    virtualNetworkSubnetId: '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite'
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -458,7 +497,7 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 //
 // begin VNET resources
 
-resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNET) {
+resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNet1) {
   name: virtualNetworkName
   location: location
   properties: {
@@ -486,7 +525,7 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
   }
 }
 
-resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNET) {
+resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNet1) {
   name: privateEndpointName
   location: location
   properties: {
@@ -512,14 +551,14 @@ resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-0
 //  "message": "There is already an operation in progress which requires exclusive lock on this service cosmos-xyfolxgnipoog. Please retry the operation after sometime.
 // ActivityId: 3c6f5526-a67a-4908-8cd9-c4bb6533ba20, Microsoft.Azure.Documents.Common/2.14.0"
 
-resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = if (useVNET){
+resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = if (useVNet1){
   name: privateDnsZones_dns_aadb2c_blazorserverdemo_name
   location: 'global'
   properties: {
   }
 }
 
-resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_dns_aadb2c_blazorserverdemo_name 'Microsoft.Network/privateDnsZones/SOA@2018-09-01' = if (useVNET){
+resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_dns_aadb2c_blazorserverdemo_name 'Microsoft.Network/privateDnsZones/SOA@2018-09-01' = if (useVNet1){
   parent: privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource
   name: '@'
   properties: {
@@ -536,7 +575,7 @@ resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_dns_aadb2c_blazor
   }
 }
 
-resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_virtnetlnk001 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if (useVNET){
+resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_virtnetlnk001 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if (useVNet1){
   parent: privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource
   name: virtualLinkName
   location: 'global'
