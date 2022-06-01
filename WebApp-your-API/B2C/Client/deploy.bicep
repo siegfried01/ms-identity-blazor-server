@@ -60,7 +60,7 @@
  param azureSqlServerAdminPassword string
 
  @description('Are we using VNET to protect database?')
- param useVNET bool = false
+ param useVNET bool = true
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -144,11 +144,11 @@ param dockerhubPassword string
 param dockerUsername string = 'siegfried01'
 
 // https://stackoverflow.com/questions/34198392/docker-official-registry-docker-hub-url get info on dockerhub
-output dockerhubCreds object = appConfigNew
+//output dockerhubCreds object = appConfigNew
 
 
 resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
-  name: 'asc-${name}config'
+  name: '${name}-config'
   location: location
   sku: {
     name: configSku
@@ -316,7 +316,9 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
     httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
     serverFarmId: plan.id   // it should look like /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/virtualNetworks/{vnetName}/subnets/{subnetName}
   //  virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName_resource.name}/subnets/${subnetName}'
-     //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName_resource.name}/subnets/${subnetName}'
+    // This does the VNET integration for S1
+     //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName_resource.name}/subnets/${subnetName002}'
+     // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -328,8 +330,8 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
           value: cosmosDbAccount.listKeys().primaryMasterKey
         }
       ]
-      linuxFxVersion: 'DOCKER|siegfried01/demovisualstudiocicdforblazorserver:latest'
-      //linuxFxVersion: 'DOTNETCORE|6'
+      //linuxFxVersion: 'DOCKER|siegfried01/blazorserverclient:latest'
+      linuxFxVersion: 'DOTNETCORE|6'
       connectionStrings: [
         {
           name: 'AppConfig'
@@ -357,20 +359,6 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
       }
     }
   }
-
-}
-
-var appConfigNew = {
-  DOCKER_ENABLE_CI: 'true'
-  DOCKER_REGISTRY_SERVER_PASSWORD: dockerhubPassword
-  DOCKER_REGISTRY_SERVER_URL: 'https://index.docker.io/v1/'
-  DOCKER_REGISTRY_SERVER_USERNAME: dockerUsername
-}
-
-resource appSettings 'Microsoft.Web/sites/config@2021-01-15' = {
-name: 'appsettings'
-parent: web
-properties: appConfigNew
 }
 
 
@@ -516,83 +504,3 @@ resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-0
 }
 
 // end VNET resources
-/*
-022-05-26T13:06:22  Welcome, you are now connected to log-streaming service.
-Starting Log Tail -n 10 of existing logs ----
-/home/LogFiles/__lastCheckTime.txt  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/__lastCheckTime.txt)5/26/2022 1:05:58 PM
-/home/LogFiles/kudu/trace/0fb53fc1f93b-e53b775c-56b3-40d0-83e6-14c16458c4c2.txt  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/kudu/trace/0fb53fc1f93b-e53b775c-56b3-40d0-83e6-14c16458c4c2.txt)
-2022-05-26T13:05:56    Outgoing response, type: response, statusCode: 404, statusText: NotFound
-/home/LogFiles/kudu/trace/0fb53fc1f93b-fea81e74-3023-4713-ae40-0397ee96048b.txt  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/kudu/trace/0fb53fc1f93b-fea81e74-3023-4713-ae40-0397ee96048b.txt)
-2022-05-26T13:04:58  Startup Request, url: /api/vfs/site/wwwroot/?_=1653570269663, method: GET, type: request, pid: 66,1,5, ScmType: None
-/home/LogFiles/2022_05_26_RD0050F221F9BC_docker.log  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/2022_05_26_RD0050F221F9BC_docker.log)
-2022-05-26T13:06:06.258Z INFO  - Pulling image: demovisualstudiocicdforblazorserver:lastest
-2022-05-26T13:06:07.261Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T13:06:07.268Z ERROR - Pull image threw Exception: Input string was not in a correct format.
-2022-05-26T13:06:07.270Z INFO  - Pulling image from Docker hub: library/demovisualstudiocicdforblazorserver:lastest
-2022-05-26T13:06:08.261Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T13:06:08.262Z WARN  - Image pull failed. Defaulting to local copy if present.
-2022-05-26T13:06:08.271Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
-2022-05-26T13:06:14.248Z INFO  - Stopping site xyfolxgnipoogweb because it failed during startup.
-/home/LogFiles/2022_05_26_RD0050F221F9BC_msi_docker.log  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/2022_05_26_RD0050F221F9BC_msi_docker.log)
-Ending Log Tail of existing logs ---
-Starting Live Log Stream ---
-2022-05-26T13:07:23  No new trace in the past 1 min(s).
-2022-05-26T13:08:23  No new trace in the past 2 min(s).
-2022-05-26T13:08:45.623Z INFO  - Starting container for site
-2022-05-26T13:08:45.624Z INFO  - docker run -d -p 5009:8081 --name xyfolxgnipoogweb_0_cc82da51_msiProxy -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=xyfolxgnipoogweb.azurewebsites.net -e WEBSITE_INSTANCE_ID=8da86894c115aaa12b0cc1f0670e554342b94e94c464e9ea3d58600419d382ef -e HTTP_LOGGING_ENABLED=1 appsvc/msitokenservice:2007200210
-:52.854Z ERROR - Pull image threw Exception: Input string was not in a correct format.
-2022-05-26T13:08:52.855Z INFO  - Pulling image from Docker hub: library/demovisualstudiocicdforblazorserver:lastest
-2022-05-26T13:08:53.815Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T13:08:53.816Z WARN  - Image pull failed. Defaulting to local copy if present.
-2022-05-26T13:08:53.822Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
-2022-05-26T13:08:59.779Z INFO  - Stopping site xyfolxgnipoogweb because it failed during startup.
-2022-05-26T13:10:23  No new trace in the past 1 min(s).
-2022-05-26T13:11:15.425Z INFO  - Starting container for site
-2022-05-26T13:11:15.426Z INFO  - docker run -d -p 5281:8081 --name xyfolxgnipoogweb_0_f10b05fb_msiProxy -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=xyfolxgnipoogweb.azurewebsites.net -e WEBSITE_INSTANCE_ID=8da86894c115aaa12b0cc1f0670e554342b94e94c464e9ea3d58600419d382ef -e HTTP_LOGGING_ENABLED=1 appsvc/msitokenservice:2007200210
-:22.263Z ERROR - Pull image threw Exception: Input string was not in a correct format.
-2022-05-26T13:11:22.265Z INFO  - Pulling image from Docker hub: library/demovisualstudiocicdforblazorserver:lastest
-2022-05-26T13:11:23.206Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T13:11:23.207Z WARN  - Image pull failed. Defaulting to local copy if present.
-2022-05-26T13:11:23.209Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
-2022-05-26T13:11:29.238Z INFO  - Stopping site xyfolxgnipoogweb because it failed during startup.
-2022-05-26T13:13:23  No new trace in the past 1 min(s).
-2022-05-26T13:13:47.655Z INFO  - Starting container for site
-2022-05-26T13:13:47.656Z INFO  - docker run -d -p 8310:8081 --name xyfolxgnipoogweb_0_ab5f89f3_msiProxy -e WEBSITE_ROLE_INSTANCE_ID=0 -e WEBSITE_HOSTNAME=xyfolxgnipoogweb.azurewebsites.net -e WEBSITE_INSTANCE_ID=8da86894c115aaa12b0cc1f0670e554342b94e94c464e9ea3d58600419d382ef -e HTTP_LOGGING_ENABLED=1 appsvc/msitokenservice:2007200210
-:55.022Z ERROR - Pull image threw Exception: Input string was not in a correct format.
-2022-05-26T13:13:55.028Z INFO  - Pulling image from Docker hub: library/demovisualstudiocicdforblazorserver:lastest
-2022-05-26T13:13:55.952Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T13:13:55.953Z WARN  - Image pull failed. Defaulting to local copy if present.
-2022-05-26T13:13:55.957Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
-2022-05-26T13:14:01.819Z INFO  - Stopping site xyfolxgnipoogweb because it failed during startup.
-2022-05-26T13:15:23  No new trace in the past 1 min(s).
-2022-05-26T13:16:23  No new trace in the past 2 min(
-
-fix lastest->latest
-
-2022-05-26T15:33:28  Welcome, you are now connected to log-streaming service.
-Starting Log Tail -n 10 of existing logs ----
-/home/LogFiles/__lastCheckTime.txt  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/__lastCheckTime.txt)05/26/2022 15:33:05
-/home/LogFiles/kudu/trace/583fc9661627-87e59a06-7a80-452f-92f2-95eaa7647282.txt  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/kudu/trace/583fc9661627-87e59a06-7a80-452f-92f2-95eaa7647282.txt)
-2022-05-26T15:31:43  Startup Request, url: /api/vfs/site/wwwroot/?_=1653579060402, method: GET, type: request, pid: 63,1,5, ScmType: None
-/home/LogFiles/2022_05_26_lw1sdlwk00013K_docker.log  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/2022_05_26_lw1sdlwk00013K_docker.log)
-2022-05-26T15:33:00.170Z INFO  - Stopping site xyfolxgnipoogweb because it failed during startup.
-2022-05-26T15:33:22.881Z INFO  - Pulling image: demovisualstudiocicdforblazorserver:latest
-2022-05-26T15:33:23.829Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T15:33:23.829Z ERROR - Pull image threw Exception: Input string was not in a correct format.
-2022-05-26T15:33:23.842Z INFO  - Pulling image from Docker hub: library/demovisualstudiocicdforblazorserver:latest
-2022-05-26T15:33:24.832Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T15:33:24.853Z WARN  - Image pull failed. Defaulting to local copy if present.
-2022-05-26T15:33:24.902Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
-/home/LogFiles/2022_05_26_lw1sdlwk00013K_msi_docker.log  (https://xyfolxgnipoogweb.scm.azurewebsites.net/api/vfs/LogFiles/2022_05_26_lw1sdlwk00013K_msi_docker.log)
-Ending Log Tail of existing logs ---
-Starting Live Log Stream ---
-2022-05-26T15:33:22.881Z INFO  - Pulling image: demovisualstudiocicdforblazorserver:latest
-2022-05-26T15:33:23.829Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T15:33:23.829Z ERROR - Pull image threw Exception: Input string was not in a correct format.
-2022-05-26T15:33:23.842Z INFO  - Pulling image from Docker hub: library/demovisualstudiocicdforblazorserver:latest
-2022-05-26T15:33:24.832Z ERROR - DockerApiException: Docker API responded with status code=NotFound, response={"message":"pull access denied for demovisualstudiocicdforblazorserver, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"}
-2022-05-26T15:33:24.853Z WARN  - Image pull failed. Defaulting to local copy if present.
-2022-05-26T15:33:24.902Z ERROR - Image pull failed: Verify docker image configuration and credentials (if using private repository)
-2022-05-26T15:33:30.602Z INFO  - Stopping site xyfolxgnipoogweb because it failed during startup.
-
- */
