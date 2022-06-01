@@ -105,7 +105,7 @@ param cosmosEndPoint string
   'P3'
   'P4'
 ])
-param webPlanSku string = 'F1'
+param webPlanSku string = useVNET?'S1':'F1'
 
 @description('The App Configuration SKU. Only "standard" supports customer-managed keys from Key Vault')
 @allowed([
@@ -134,8 +134,12 @@ param publicNetworkAccess string = 'Enabled'
 @description('Private endpoint name')
 param privateEndpointName string='cosmosPrivateEndpoint'
 
-param subnetName001 string = 'subnet001'
-param subnetName002 string = 'subnet002'
+param subnetCosmos string = 'subnetCosmos'
+param subnetWebsite string = 'subnetWebsite'
+
+param privateDnsZones_dns_aadb2c_blazorserverdemo_name string = 'dns_aadb2c.blazorserverdemo'
+param virtualLinkName string = 'vnetlink001'
+param privateDnsHost string = 'azureprivatedns.net'
 
 // end VNET params
 
@@ -315,9 +319,9 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
     serverFarmId: plan.id   // it should look like /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/virtualNetworks/{vnetName}/subnets/{subnetName}
-  //  virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName_resource.name}/subnets/${subnetName}'
+  //  virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetName}'
     // This does the VNET integration for S1
-     //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName_resource.name}/subnets/${subnetName002}'
+     virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
      // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
@@ -454,7 +458,7 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 //
 // begin VNET resources
 
-resource virtualNetworkName_resource 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNET) {
+resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNET) {
   name: virtualNetworkName
   location: location
   properties: {
@@ -465,14 +469,14 @@ resource virtualNetworkName_resource 'Microsoft.Network/virtualNetworks@2020-06-
     }
     subnets: [
       {
-        name: subnetName001
+        name: subnetCosmos
         properties: {
           addressPrefix: '172.20.0.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
         }
       }
       {
-        name: subnetName002
+        name: subnetWebsite
         properties: {
           addressPrefix: '172.20.1.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
@@ -487,7 +491,7 @@ resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-0
   location: location
   properties: {
     subnet: {
-      id: resourceId('Microsoft.Network/VirtualNetworks/subnets', virtualNetworkName, subnetName001)
+      id: resourceId('Microsoft.Network/VirtualNetworks/subnets', virtualNetworkName, subnetCosmos)
     }
     privateLinkServiceConnections: [
       {
@@ -500,6 +504,47 @@ resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-0
         }
       }
     ]
+  }
+}
+
+// ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"PreconditionFailed","message":"{
+//  "code": "PreconditionFailed",
+//  "message": "There is already an operation in progress which requires exclusive lock on this service cosmos-xyfolxgnipoog. Please retry the operation after sometime.
+// ActivityId: 3c6f5526-a67a-4908-8cd9-c4bb6533ba20, Microsoft.Azure.Documents.Common/2.14.0"
+
+resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = if (useVNET){
+  name: privateDnsZones_dns_aadb2c_blazorserverdemo_name
+  location: 'global'
+  properties: {
+  }
+}
+
+resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_dns_aadb2c_blazorserverdemo_name 'Microsoft.Network/privateDnsZones/SOA@2018-09-01' = if (useVNET){
+  parent: privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource
+  name: '@'
+  properties: {
+    ttl: 3600
+    soaRecord: {
+      email: 'azureprivatedns-host.microsoft.com'
+      expireTime: 2419200
+      host: privateDnsHost
+      minimumTtl: 10
+      refreshTime: 3600
+      retryTime: 300
+      serialNumber: 1
+    }
+  }
+}
+
+resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_virtnetlnk001 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if (useVNET){
+  parent: privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource
+  name: virtualLinkName
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: VirtualNetwork.id
+    }
   }
 }
 
