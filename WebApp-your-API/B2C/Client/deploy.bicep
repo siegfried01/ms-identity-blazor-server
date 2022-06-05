@@ -133,10 +133,11 @@ param cosmosAccountName string = 'cosmos-${uniqueString(resourceGroup().id)}'
 param publicNetworkAccess string = 'Enabled'
 
 @description('Private endpoint name')
-param privateEndpointName string='cosmosPrivateEndpoint'
+param cosmosPrivateEndpointName string='cosmosPrivateEndpoint'
 
 param subnetCosmos string = 'subnetCosmos'
 param subnetWebsite string = 'subnetWebsite'
+param subnetAzureSql string = 'subnetAzureSql'
 param virtualNetworks_vnet_xyfolxgnipoog_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}'
 
 param privateDnsZones_dns_aadb2c_blazorserverdemo_name string = 'dns_aadb2c.blazorserverdemo'
@@ -145,6 +146,7 @@ param privateDnsHost string = 'azureprivatedns.net'
 
 // end VNET params
 
+ 
 @secure()
 param dockerhubPassword string
 param dockerUsername string = 'siegfried01'
@@ -292,7 +294,7 @@ resource kvCosmosAccountKeySecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01'
 }
 
 resource plan 'Microsoft.Web/serverfarms@2020-12-01' = {
-  name: '${name}plan'
+  name: '${name}-plan'
   location: location
   sku: {
     name: webPlanSku
@@ -342,6 +344,7 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
 
 
 */
+
 
 
 // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/web-app-managed-identity-sql-db/main.bicep#L73
@@ -403,6 +406,7 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
     }
   }
 }
+
 
 
 output appConfigConnectionString string = listKeys(config.id, config.apiVersion).value[0].connectionString
@@ -497,6 +501,25 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 //
 // begin VNET resources
 
+
+/*
+{"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"PreconditionFailed","message":"{
+  "code": "PreconditionFailed",
+  "message": "There is already an operation in progress which requires exclusive lock on this service cosmos-xyfolxgnipoog. Please retry the operation after sometime.
+ActivityId: 0ba8dcc1-7847-4fdf-965a-a5c9dad1146e, Microsoft.Azure.Documents.Common/2.14.0"
+}"},{"code":"BadRequest","message":"{
+  "error": {
+    "code": "InvalidRequestFormat",
+    "message": "Cannot parse the request.",
+    "details": [
+      {
+        "code": "MissingJsonReferenceId",
+        "message": "Value for reference id is missing. Path properties.subnets[1].properties.networkSecurityGroup."
+      }
+    ]
+  }
+}"}]}}
+*/
 resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNet1) {
   name: virtualNetworkName
   location: location
@@ -511,13 +534,56 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
         name: subnetCosmos
         properties: {
           addressPrefix: '172.20.0.0/24'
-          privateEndpointNetworkPolicies: 'Disabled'
+          privateEndpointNetworkPolicies: 'Enabled'
+          delegations: [
+            {
+              name: 'delegation'
+              properties: {
+                serviceName: 'Microsoft.DocumentDB/databaseAccounts'
+              }
+            }
+          ]
         }
       }
       {
         name: subnetWebsite
         properties: {
           addressPrefix: '172.20.1.0/24'
+          privateEndpointNetworkPolicies: 'Enabled'
+          delegations: [
+            {
+              name: 'delegation'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          networkSecurityGroup: {
+            properties: {
+              securityRules: [
+                {
+                  properties: {
+                    direction: 'Inbound'
+                    protocol: '*'
+                    access: 'Allow'
+                  }
+                }
+                {
+                  properties: {
+                    direction: 'Outbound'
+                    protocol: '*'
+                    access: 'Allow'
+                  }
+                }
+              ]
+            }
+          }          
+        }
+      }
+      {
+        name: subnetAzureSql
+        properties: {
+          addressPrefix: '172.20.2.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
         }
       }
@@ -525,8 +591,8 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
   }
 }
 
-resource privateEndpointName_resource 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNet1) {
-  name: privateEndpointName
+resource cosmosPrivateEndpoint 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNet1) {
+  name: cosmosPrivateEndpointName
   location: location
   properties: {
     subnet: {
