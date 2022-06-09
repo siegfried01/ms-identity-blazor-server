@@ -9,7 +9,7 @@ env:
   AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.xyfolxgnipoogweb_a0c9 }}
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 5.0.x
-  WORKING_DIRECTORY: Client
+  WORKING_DIRECTORY: WebApp-your-API/B2C/Client
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -19,38 +19,19 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-    - name: Where are we
-      run: |
-        echo We are in $PWD         01
-        ls -al
-        cd ./WebApp-your-API/B2C
-        echo We are now in $PWD    02
-        ls -al
-        echo start restore
     - name: Restore
-      run: |
-        echo We are in $PWD
-        cd ./WebApp-your-API/B2C
-        echo We are in $PWD
-        ls "${{ env.WORKING_DIRECTORY }}"
-        dotnet restore "${{ env.WORKING_DIRECTORY }}"
+      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Build
-      run: |
-        cd ./WebApp-your-API/B2C
-        echo We are in $PWD
-        dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
     - name: Test
-      run: |
-        cd ./WebApp-your-API/B2C
-        echo We are in $PWD
-        dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
     - name: Publish
-      run: dotnet publish ./WebApp-your-API/B2C/"${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        package: ./WebApp-your-API/B2C/${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
         publish-profile: ${{ env.AZURE_WEBAPP_PUBLISH_PROFILE }}
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1.0.0
