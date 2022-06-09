@@ -45,10 +45,7 @@ jobs:
         echo We are in $PWD
         dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
     - name: Publish
-      run: |
-        cd ./WebApp-your-API/B2C
-        echo We are in $PWD
-        dotnet publish ./WebApp-your-API/B2C/"${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      run: dotnet publish ./WebApp-your-API/B2C/"${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
