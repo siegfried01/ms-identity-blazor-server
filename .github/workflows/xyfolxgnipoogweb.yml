@@ -29,19 +29,23 @@ jobs:
         echo start restore
     - name: Restore
       run: |
-        echo We are in $PWD       03 restore
-        ls "${{ env.WORKING_DIRECTORY }}"
-        cd /home/runner/work/ms-identity-blazor-server/ms-identity-blazor-server/WebApp-your-API/B2C
-        echo cd /home/runner/work/ms-identity-blazor-server/ms-identity-blazor-server/WebApp-your-API/B2C
-        echo We are in $PWD      04 begin restore
+        echo We are in $PWD
+        cd ./WebApp-your-API/B2C
+        echo We are in $PWD
         ls "${{ env.WORKING_DIRECTORY }}"
         dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Build
-      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: |
+        cd ./WebApp-your-API/B2C
+        echo We are in $PWD
+        dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
     - name: Test
       run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
     - name: Publish
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      run: |
+        cd ./WebApp-your-API/B2C
+        echo We are in $PWD
+        dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
