@@ -40,7 +40,10 @@ jobs:
         echo We are in $PWD
         dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
     - name: Test
-      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+      run: |
+        cd ./WebApp-your-API/B2C
+        echo We are in $PWD
+        dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
     - name: Publish
       run: |
         cd ./WebApp-your-API/B2C
