@@ -2,34 +2,31 @@ name: Build and deploy .NET Core app to Linux WebApp xyfolxgnipoogweb
 on:
   push:
     branches:
-    - main
+    - Oury-Hill-Deploy-RBAC
 env:
   AZURE_WEBAPP_NAME: xyfolxgnipoogweb
   AZURE_WEBAPP_PACKAGE_PATH: Client/publish
-  AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.xyfolxgnipoogweb_a0c9 }}
+  AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.xyfolxgnipoogweb_5e96 }}
   CONFIGURATION: Release
-  DOTNET_CORE_VERSION: 5.0.x
+  DOTNET_CORE_VERSION: 6.0.x
   WORKING_DIRECTORY: Client
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: Where are we
-      run: |
-        echo "We are in $PWD"
-        ls -al
-        cd WebApp-your-API/B2C/Client
-        echo "We are now in $PWD"
-        ls -al
     - uses: actions/checkout@v2
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
     - name: Restore
-      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+      run:
+        echo working dir = "${{ env.WORKING_DIRECTORY }}" configuration = ${{ env.CONFIGURATION }} begin build
+        dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Build
-      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run:
+        echo working dir = "${{ env.WORKING_DIRECTORY }}" configuration = ${{ env.CONFIGURATION }} begin build
+        dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
     - name: Test
       run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
     - name: Publish

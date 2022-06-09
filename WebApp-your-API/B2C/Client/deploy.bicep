@@ -364,7 +364,7 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
      //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
      // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
     // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/app-service-regional-vnet-integration/main.bicep#L57
-    virtualNetworkSubnetId: '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite'
+    virtualNetworkSubnetId: useVNet1 ? '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite' : null
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
