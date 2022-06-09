@@ -53,7 +53,7 @@ jobs:
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        package: /WebApp-your-API/B2C/${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        package: ./WebApp-your-API/B2C/${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
         publish-profile: ${{ env.AZURE_WEBAPP_PUBLISH_PROFILE }}
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1.0.0
