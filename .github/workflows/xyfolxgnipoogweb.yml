@@ -17,10 +17,9 @@ jobs:
     - name: Where are we
       run: |
         echo "We are in $PWD"
-        ls -al
-        cd WebApp-your-API/B2C/Client
+        ls -alR
         echo "We are now in $PWD"
-        ls -al
+        ls -alR
     - uses: actions/checkout@v2
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
