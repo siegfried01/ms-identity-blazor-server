@@ -13,37 +13,74 @@
 <!-- cosmos URI = @Configuration.GetSection("cosmosConfig")["uri"] = @Configuration["cosmosConfig:uri"] -->
 
 <table border="1">
-    <tr><td rowspan="2" colspan="2"><label>Value <input @bind="value" /></label></td><td><button @onclick="WriteToCosmosUsingManagedIdentity">Write to Cosmos Using Managed Identity</button></td><td><div style="border:double">@cosmosStatus</div></td></tr>
+    <tr><td rowspan="2" colspan="2"><label>Value <input @bind="value" /></label></td><td><button @onclick="WriteToCosmosUsingManagedIdentity">Write to Cosmos Using Managed Identity</button></td><td><div style="border:double">@cosmosWriteStatus</div><div style="border:double">@cosmosReadStatus</div></td></tr>
     <tr><td><button @onclick="WriteToAzureSQLUsingManagedIdentity">Write to Azure SQL using Managed Identity</button> </td><td><div style="border:double">@azureSQLStatusManagedIdentity</div></td></tr>
     <tr><td><label>admin username:</label><input @bind="adminUsername" /></td><td><label>admin password: <input type="password" @bind="adminPassword" /></label></td><td><button @onclick="WriteToAzureSQLUsingAdminUsernamePassword">Write to Azure SQL using Admin & Password</button> </td><td><div style="border:double">@azureSQLStatusUsernamePassword</div></td></tr>
 </table>
 <h1>results</h1>
 <table border="1">
-    @foreach (var r in rows)
-    {
+    <thead>
+    <th>Azure SQL</th>
+    <th>Azure Cosmos</th>
+    </thead>
+    <tbody>
         <tr>
-            <td>@r.id</td>
-            <td>@r.name</td>
-            <td>@r.dateTime</td>
+            <td>
+                <table border="1">
+                    @foreach (var r in azureSQLRows)
+                    {
+                        <tr>
+                            <td>@r.id</td>
+                            <td>@r.name</td>
+                            <td>@r.dateTime</td>
+                        </tr>
+                    }
+                </table>
+            </td>
         </tr>
-    }
+        <tr>
+            <td>
+                <table border="1">
+                    @foreach (var r in azureCosmosRows)
+                    {
+                        <tr>
+                            <td>@r.id</td>
+                            <td>@r.name</td>
+                            <td>@r.dateTime</td>
+                        </tr>
+                    }
+                </table>
+            </td>
+        </tr>
+    </tbody>
 </table>
 
 @code
 {
-    class Rows
+    class AzureSQLRows
     {
         public int id;
         public string name;
         public DateTime dateTime;
     }
-    List<Rows> rows = new List<Rows>();
-    string cosmosStatus = "Normal";
+    List<AzureSQLRows> azureSQLRows = new List<AzureSQLRows>();
+    class AzureDocumentDbItems
+    {
+        public string id;
+        public string partitionKey;
+        public string name;
+        public string dateTime;
+    }
+
+    List<AzureDocumentDbItems> azureCosmosRows = new List<AzureDocumentDbItems>();
+    string cosmosWriteStatus = "Normal";
+    string cosmosReadStatus = "Normal";
     string azureSQLStatusUsernamePassword = "Normal";
     string azureSQLStatusManagedIdentity = "Normal";
     string adminPassword = "";
     string adminUsername = "";
-    string value { get; set; } = "Siegfried Heintze";
+    string value { get; set; } = "Siegfried Heintze  1";
+    string cosmosQueryString = "SELECT * FROM c";
     string increment(string value)
     {
         var regx = new System.Text.RegularExpressions.Regex(@"(\d)+");
@@ -77,14 +114,14 @@
             using (var query = new SqlCommand("SELECT * FROM TEST", connection))
             {
                 using var reader = await query.ExecuteReaderAsync();
-                rows = new List<Rows>();
+                azureSQLRows = new List<AzureSQLRows>();
                 while (await reader.ReadAsync())
                 {
-                    var r = new Rows();
+                    var r = new AzureSQLRows();
                     r.id = reader.GetInt32(0);
                     r.name = reader.GetString(1);
                     r.dateTime = reader.GetDateTime(2);
-                    rows.Add(r);
+                    azureSQLRows.Add(r);
                 }
             }
         }
@@ -95,7 +132,7 @@
         var now = DateTime.Now;
         var nowString = now.ToString("yyyy MMMM dd HH:mm:ss.ffff (ddd)");
         using var connection = new SqlConnection($"Server=tcp:rbac-demo-server.database.windows.net,1433;Database=rbacdemoDatabase;User Id=serverAdmin;Password={adminPassword};");
-        await connection.OpenAsync(); 
+        await connection.OpenAsync();
         var retry = 0;
         while (retry++ < 2)
             try
@@ -157,15 +194,30 @@
         var newId = Guid.NewGuid().ToString();
         try
         {
-            await container.CreateItemAsync(new { id = newId, partitionKey = newId, name = value },
-            new PartitionKey(newId)/*, cancellationToken: stoppingToken*/);
-            cosmosStatus = "Success: completed= " + nowString + " elapse=" + elapse(now);
-            WriteLine($"wrote to Cosmos: {cosmosStatus} name={value} id={newId}");
+            await container.CreateItemAsync(new AzureDocumentDbItems { id = newId, partitionKey = newId, name = value, dateTime = nowString });
+            new PartitionKey(newId/*, cancellationToken: stoppingToken*/);
+            cosmosWriteStatus = "Success: completed= " + nowString + " elapse=" + elapse(now);
+            WriteLine($"wrote to Cosmos: {cosmosWriteStatus} name={value} id={newId}");
         }
         catch (Exception ex)
         {
-            cosmosStatus = "" + nowString + $" (elapse={elapse(now)}):  Failure=" + ex.Message;
-            WriteLine($"failed to write to Cosmos: {cosmosStatus} name={value} id={newId}");
+            cosmosWriteStatus = "" + nowString + $" (elapse={elapse(now)}):  Failure=" + ex.Message;
+            WriteLine($"failed to write to Cosmos: {cosmosWriteStatus} name={value} id={newId}");
+        }
+        try
+        {
+            var query = container.GetItemQueryIterator<AzureDocumentDbItems>(new QueryDefinition(cosmosQueryString));
+            azureCosmosRows = new List<AzureDocumentDbItems>();
+            while (query.HasMoreResults)
+            {
+                var response = await query.ReadNextAsync();
+                azureCosmosRows.AddRange(response.ToList());
+            }
+        }
+        catch (Exception ex)
+        {
+            cosmosReadStatus = "" + nowString + $" (elapse={elapse(now)}):  Failure=" + ex.Message;
+            WriteLine($"failed to read from Cosmos: {cosmosWriteStatus} name={value} id={newId}");
         }
         string elapse(DateTime start)
         {
