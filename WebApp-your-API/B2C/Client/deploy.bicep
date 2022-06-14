@@ -60,7 +60,7 @@
  param azureSqlServerAdminPassword string
 
  @description('Are we using VNET to protect database?')
- param useVNet1 bool = true
+ param useVNet1 bool = false
  param useVNet2 bool = false
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
@@ -115,6 +115,10 @@ param webPlanSku string = useVNet1?'S1':'F1'
 ])
 param configSku string = 'free'
 
+@description('The URL for the GitHub repository that contains the project to deploy.')
+param repositoryUrl string = 'https://github.com/siegfried01/ms-identity-blazor-server.git'
+@description('The branch of the GitHub repository to use.')
+param branch string = 'main'
 
 // begin VNET params
 @description('Virtual network name')
@@ -407,7 +411,15 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   }
 }
 
-
+resource srcControls 'Microsoft.Web/sites/sourcecontrols@2020-06-01' = {
+  name: '${web.name}/web'
+  properties: {
+    repoUrl: repositoryUrl
+    branch: branch
+    isManualIntegration: false
+    isGitHubAction: true
+  }
+}
 
 output appConfigConnectionString string = listKeys(config.id, config.apiVersion).value[0].connectionString
 // output siteUrl string = 'https://${web.properties.defaultHostName}/'

@@ -197,12 +197,15 @@
             await container.CreateItemAsync(new AzureDocumentDbItems { id = newId, partitionKey = newId, name = value, dateTime = nowString });
             new PartitionKey(newId/*, cancellationToken: stoppingToken*/);
             cosmosWriteStatus = "Success: completed= " + nowString + " elapse=" + elapse(now);
+            System.Diagnostics.Trace.TraceError("System.Diagnostics.Trace.TraceError: "+cosmosWriteStatus);
             WriteLine($"wrote to Cosmos: {cosmosWriteStatus} name={value} id={newId}");
         }
         catch (Exception ex)
         {
             cosmosWriteStatus = "" + nowString + $" (elapse={elapse(now)}):  Failure=" + ex.Message;
-            WriteLine($"failed to write to Cosmos: {cosmosWriteStatus} name={value} id={newId}");
+            var msg = $"failed to write to Cosmos: {cosmosWriteStatus} name={value} id={newId}";
+            WriteLine(msg);
+            System.Diagnostics.Trace.TraceError("System.Diagnostics.Trace.TraceError: "+msg);
         }
         try
         {
@@ -218,6 +221,7 @@
         {
             cosmosReadStatus = "" + nowString + $" (elapse={elapse(now)}):  Failure=" + ex.Message;
             WriteLine($"failed to read from Cosmos: {cosmosWriteStatus} name={value} id={newId}");
+            System.Diagnostics.Trace.TraceError("System.Diagnostics.Trace.TraceError: "+cosmosReadStatus);
         }
         string elapse(DateTime start)
         {
