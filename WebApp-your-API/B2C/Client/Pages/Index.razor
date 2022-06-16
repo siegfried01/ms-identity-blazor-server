@@ -196,7 +196,7 @@
         {
             await container.CreateItemAsync(new AzureDocumentDbItems { id = newId, partitionKey = newId, name = value, dateTime = nowString });
             new PartitionKey(newId/*, cancellationToken: stoppingToken*/);
-            cosmosWriteStatus = "Success: completed= " + nowString + " elapse=" + elapse(now);
+            cosmosWriteStatus = "Success: write completed= " + nowString + " elapse=" + elapse(now);
             System.Diagnostics.Trace.TraceError("System.Diagnostics.Trace.TraceError: "+cosmosWriteStatus);
             WriteLine($"wrote to Cosmos: {cosmosWriteStatus} name={value} id={newId}");
         }
@@ -216,6 +216,7 @@
                 var response = await query.ReadNextAsync();
                 azureCosmosRows.AddRange(response.ToList());
             }
+            cosmosReadStatus = "Success: completed read query= " + nowString + " elapse=" + elapse(now);
         }
         catch (Exception ex)
         {

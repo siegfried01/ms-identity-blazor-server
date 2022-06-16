@@ -18,6 +18,8 @@ var roleDefId = guid('sql-role-definition-', principalId, cosmosDbAccountId)
 var roleDefName = 'Custom Read/Write role ${it}'
 var roleAssignId = guid(roleDefId, principalId, cosmosDbAccountId)
 
+// https://docs.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac
+
 resource roleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2021-06-15' = {
   name: '${cosmosDbAccountName}/${roleDefId}'
   properties: {
@@ -31,6 +33,10 @@ resource roleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinition
         dataActions: [
           'Microsoft.DocumentDB/databaseAccounts/readMetadata'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery'
         ]
       }
     ]

@@ -1,5 +1,109 @@
 /*
+ * 1: Deploy with no powershell to assign roles
  * Begin commands to execute this file using Azure CLI with PowerShell
+ * echo begin deploy with no powershell to assign roles
+ * echo WaitForBuildComplete
+ * WaitForBuildComplete
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * echo Set-AzDefault -ResourceGroupName $rg 
+ * Set-AzDefault -ResourceGroupName $rg
+ * echo begin create deployment group
+ * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc
+ * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
+ * write-output "principalId=${MI_PRINID}"
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * echo end deploy with no powershell to assign roles
+ * End commands to execute this file using Azure CLI with Powershell
+ *
+ * 2: Delete resource group contents
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * echo begin Delete resource group contents
+ * echo CreateBuildEvent.exe
+ * CreateBuildEvent.exe&
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault | ft
+ * $kv=$(Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
+ * Write-Output "kv=$kv"
+ * echo begin delete 
+ * az.cmd deployment group create --mode complete --template-file ./clear-resources.json --resource-group rg_AADB2C_BlazorServerDemo
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * write-output "begin purge key vault"
+ * write-output "az.cmd keyvault purge --name $kv --location $loc --no-wait"
+ * az.cmd keyvault purge --name $kv --location $loc --no-wait
+ * BuildIsComplete.exe
+ * echo all done deleting resource group
+ * End commands to execute this file using Azure CLI with Powershell
+ *
+ * 3: Assign roles to System Assigned with powershell
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * $accountName="cosmos-xyfolxgnipoog"
+ * $webappname="xyfolxgnipoogweb" 
+ * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
+ * echo $appId
+ * $accountName="cosmos-xyfolxgnipoog"
+ * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
+ *     -ResourceGroupName $rg `
+ *     -Type CustomRole -RoleName SiegSystemAssignedRoles001 `
+ *     -DataAction @( `
+ *         'Microsoft.DocumentDB/databaseAccounts/readMetadata', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery') `
+ *     -AssignableScope "/"
+ * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
+ * echo idRole=$idRole
+ * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
+ * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
+ * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * echo Assign roles to System Assigned with powershell
+ * End commands to execute this file using Azure CLI with Powershell
+ *
+ * 5: Assign roles to user Assigned with powershell
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * echo begin Assign roles to user Assigned with powershell
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * $appId=$(az identity show --name umid-cosmosid --resource-group $rg  --query "principalId" -o tsv)
+ * write-output "principalId=${MI_PRINID}"
+ * $accountName="cosmos-xyfolxgnipoog"
+ * $webappname="xyfolxgnipoogweb" 
+ * echo $appId
+ * $accountName="cosmos-xyfolxgnipoog"
+ * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
+ *     -ResourceGroupName $rg `
+ *     -Type CustomRole -RoleName SiegUserAssignedRoles002 `
+ *     -DataAction @( `
+ *         'Microsoft.DocumentDB/databaseAccounts/readMetadata', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery') `
+ *     -AssignableScope "/"
+ * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
+ * echo idRole=$idRole
+ * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
+ * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
+ * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * echo end Assign roles to user Assigned with powershell
+ * End commands to execute this file using Azure CLI with Powershell
+ *
+ * 6: deploy and assign website system SP with powershell
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * echo begin deploy and website assign system SP with powershell
  * echo WaitForBuildComplete
  * WaitForBuildComplete
  * $name='AADB2C_BlazorServerDemo'
@@ -31,28 +135,9 @@
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
  * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
  * Get-AzResource -ResourceGroupName $rg | ft
- * echo end create deployment group
+ * echo end deploy and assign system SP with powershell
  * End commands to execute this file using Azure CLI with Powershell
  *
- *
- * Begin commands to execute this file using Azure CLI with PowerShell
- * echo CreateBuildEvent.exe
- * CreateBuildEvent.exe&
- * $name='AADB2C_BlazorServerDemo'
- * $rg="rg_$name"
- * $loc='westus2'
- * Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault | ft
- * $kv=$(Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
- * Write-Output "kv=$kv"
- * echo begin delete 
- * az.cmd deployment group create --mode complete --template-file ./clear-resources.json --resource-group rg_AADB2C_BlazorServerDemo
- * Get-AzResource -ResourceGroupName $rg | ft
- * write-output "begin purge key vault"
- * write-output "az.cmd keyvault purge --name $kv --location $loc --no-wait"
- * az.cmd keyvault purge --name $kv --location $loc --no-wait
- * BuildIsComplete.exe
- * echo all done
- * End commands to execute this file using Azure CLI with Powershell
  */
 
  @description('Azure Sql Server Admin Password')
@@ -411,13 +496,21 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   }
 }
 
-resource srcControls 'Microsoft.Web/sites/sourcecontrols@2020-06-01' = {
+resource srcControls 'Microsoft.Web/sites/sourcecontrols@2021-03-01' = {
   name: '${web.name}/web'
   properties: {
     repoUrl: repositoryUrl
     branch: branch
     isManualIntegration: false
     isGitHubAction: true
+    gitHubActionConfiguration: {
+      codeConfiguration: {
+        runtimeStack: 'DOTNETCORE'
+        runtimeVersion: '6'
+      }
+      generateWorkflowFile: false
+      isLinux: true
+    }
   }
 }
 
