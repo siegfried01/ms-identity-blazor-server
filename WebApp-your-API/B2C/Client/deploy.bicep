@@ -506,7 +506,7 @@ resource srcControls 'Microsoft.Web/sites/sourcecontrols@2021-03-01' = {
     gitHubActionConfiguration: {
       codeConfiguration: {
         runtimeStack: 'DOTNETCORE'
-        runtimeVersion: '6'
+        runtimeVersion: '5'
       }
       generateWorkflowFile: false
       isLinux: true
