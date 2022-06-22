@@ -1,7 +1,6 @@
 /*
- * 1: Deploy with no powershell to assign roles
+
  * Begin commands to execute this file using Azure CLI with PowerShell
- * echo begin deploy with no powershell to assign roles
  * echo WaitForBuildComplete
  * WaitForBuildComplete
  * $name='AADB2C_BlazorServerDemo'
@@ -10,109 +9,7 @@
  * echo Set-AzDefault -ResourceGroupName $rg 
  * Set-AzDefault -ResourceGroupName $rg
  * echo begin create deployment group
- * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc
- * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
- * write-output "principalId=${MI_PRINID}"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
- * Get-AzResource -ResourceGroupName $rg | ft
- * echo end deploy with no powershell to assign roles
- * End commands to execute this file using Azure CLI with Powershell
- *
- * 2: Delete resource group contents
- * Begin commands to execute this file using Azure CLI with PowerShell
- * echo begin Delete resource group contents
- * echo CreateBuildEvent.exe
- * CreateBuildEvent.exe&
- * $name='AADB2C_BlazorServerDemo'
- * $rg="rg_$name"
- * $loc='westus2'
- * Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault | ft
- * $kv=$(Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
- * Write-Output "kv=$kv"
- * echo begin delete 
- * az.cmd deployment group create --mode complete --template-file ./clear-resources.json --resource-group rg_AADB2C_BlazorServerDemo
- * Get-AzResource -ResourceGroupName $rg | ft
- * write-output "begin purge key vault"
- * write-output "az.cmd keyvault purge --name $kv --location $loc --no-wait"
- * az.cmd keyvault purge --name $kv --location $loc --no-wait
- * BuildIsComplete.exe
- * echo all done deleting resource group
- * End commands to execute this file using Azure CLI with Powershell
- *
- * 3: Assign roles to System Assigned with powershell
- * Begin commands to execute this file using Azure CLI with PowerShell
- * $name='AADB2C_BlazorServerDemo'
- * $rg="rg_$name"
- * $loc='westus2'
- * $accountName="cosmos-xyfolxgnipoog"
- * $webappname="xyfolxgnipoogweb" 
- * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
- * echo $appId
- * $accountName="cosmos-xyfolxgnipoog"
- * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
- *     -ResourceGroupName $rg `
- *     -Type CustomRole -RoleName SiegSystemAssignedRoles001 `
- *     -DataAction @( `
- *         'Microsoft.DocumentDB/databaseAccounts/readMetadata', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery') `
- *     -AssignableScope "/"
- * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
- * echo idRole=$idRole
- * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
- * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
- * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
- * Get-AzResource -ResourceGroupName $rg | ft
- * echo Assign roles to System Assigned with powershell
- * End commands to execute this file using Azure CLI with Powershell
- *
- * 5: Assign roles to user Assigned with powershell
- * Begin commands to execute this file using Azure CLI with PowerShell
- * echo begin Assign roles to user Assigned with powershell
- * $name='AADB2C_BlazorServerDemo'
- * $rg="rg_$name"
- * $loc='westus2'
- * $appId=$(az identity show --name umid-cosmosid --resource-group $rg  --query "principalId" -o tsv)
- * write-output "principalId=${MI_PRINID}"
- * $accountName="cosmos-xyfolxgnipoog"
- * $webappname="xyfolxgnipoogweb" 
- * echo $appId
- * $accountName="cosmos-xyfolxgnipoog"
- * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
- *     -ResourceGroupName $rg `
- *     -Type CustomRole -RoleName SiegUserAssignedRoles002 `
- *     -DataAction @( `
- *         'Microsoft.DocumentDB/databaseAccounts/readMetadata', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery') `
- *     -AssignableScope "/"
- * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
- * echo idRole=$idRole
- * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
- * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
- * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
- * Get-AzResource -ResourceGroupName $rg | ft
- * echo end Assign roles to user Assigned with powershell
- * End commands to execute this file using Azure CLI with Powershell
- *
- * 6: deploy and assign website system SP with powershell
- * Begin commands to execute this file using Azure CLI with PowerShell
- * echo begin deploy and website assign system SP with powershell
- * echo WaitForBuildComplete
- * WaitForBuildComplete
- * $name='AADB2C_BlazorServerDemo'
- * $rg="rg_$name"
- * $loc='westus2'
- * echo Set-AzDefault -ResourceGroupName $rg 
- * Set-AzDefault -ResourceGroupName $rg
- * echo begin create deployment group
- * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc
+ * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc 
  * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
  * write-output "principalId=${MI_PRINID}"
  * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
@@ -135,18 +32,39 @@
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
  * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
  * Get-AzResource -ResourceGroupName $rg | ft
- * echo end deploy and assign system SP with powershell
+ * echo end create deployment group
  * End commands to execute this file using Azure CLI with Powershell
  *
+ *
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * echo CreateBuildEvent.exe
+ * CreateBuildEvent.exe&
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault | ft
+ * $kv=$(Get-AzResource -ResourceGroupName $rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
+ * Write-Output "kv=$kv"
+ * echo begin delete 
+ * az.cmd deployment group create --mode complete --template-file ./clear-resources.json --resource-group rg_AADB2C_BlazorServerDemo
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * write-output "begin purge key vault"
+
+ * write-output "az.cmd keyvault purge --name $kv --location $loc --no-wait"
+ * az.cmd keyvault purge --name $kv --location $loc --no-wait
+ * BuildIsComplete.exe
+ * echo all done
+ * End commands to execute this file using Azure CLI with Powershell
  */
+
 
  @description('Azure Sql Server Admin Password')
  @secure()
  param azureSqlServerAdminPassword string
 
  @description('Are we using VNET to protect database?')
- param useVNet1 bool = false
- param useVNet2 bool = false
+ param useVNet1 bool = true
+ param useVNet2 bool = true
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -200,10 +118,6 @@ param webPlanSku string = useVNet1?'S1':'F1'
 ])
 param configSku string = 'free'
 
-@description('The URL for the GitHub repository that contains the project to deploy.')
-param repositoryUrl string = 'https://github.com/siegfried01/ms-identity-blazor-server.git'
-@description('The branch of the GitHub repository to use.')
-param branch string = 'main'
 
 // begin VNET params
 @description('Virtual network name')
@@ -452,8 +366,8 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
     // This does the VNET integration for S1
      //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
      // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
-    // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/app-service-regional-vnet-integration/main.bicep#L57
-    virtualNetworkSubnetId: useVNet1 ? '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite' : null
+
+    virtualNetworkSubnetId: '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite'
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -496,23 +410,6 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   }
 }
 
-resource srcControls 'Microsoft.Web/sites/sourcecontrols@2021-03-01' = {
-  name: '${web.name}/web'
-  properties: {
-    repoUrl: repositoryUrl
-    branch: branch
-    isManualIntegration: false
-    isGitHubAction: true
-    gitHubActionConfiguration: {
-      codeConfiguration: {
-        runtimeStack: 'DOTNETCORE'
-        runtimeVersion: '5'
-      }
-      generateWorkflowFile: false
-      isLinux: true
-    }
-  }
-}
 
 output appConfigConnectionString string = listKeys(config.id, config.apiVersion).value[0].connectionString
 // output siteUrl string = 'https://${web.properties.defaultHostName}/'
@@ -603,30 +500,9 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 // New error message: 2022 April 25 22:59:57.1890 (Mon): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47; Reason: (Request originated from IP 20.69.64.79 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
 //                    2022 April 26 01:35:06.7308 (Tue): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 84239951-6e27-4e84-b08f-4e0d5f5c97d6; Reason: (Request originated from IP 20.72.222.133 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 84239951-6e27-4e84-b08f-4e0d5f5c97d6, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
 // Perhaps the problem is that I'm not including the VNET? How do I do that?
-//
+// 2022 June 22 13:48:10.2817 (Wed) (elapse=00:00:02.4399): Failure=Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 4bbfb5ae-fc75-4de1-8414-f1539e8baa15; Reason: (Request originated from IP 40.64.110.93 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 4bbfb5ae-fc75-4de1-8414-f1539e8baa15, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
 // begin VNET resources
 
-
-/*
-
-New error after adding lines 540-547 on Sat Jun 04 19:57 2022
-{"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"PreconditionFailed","message":"{
-  "code": "PreconditionFailed",
-  "message": "There is already an operation in progress which requires exclusive lock on this service cosmos-xyfolxgnipoog. Please retry the operation after sometime.
-ActivityId: 0ba8dcc1-7847-4fdf-965a-a5c9dad1146e, Microsoft.Azure.Documents.Common/2.14.0"
-}"},{"code":"BadRequest","message":"{
-  "error": {
-    "code": "InvalidRequestFormat",
-    "message": "Cannot parse the request.",
-    "details": [
-      {
-        "code": "MissingJsonReferenceId",
-        "message": "Value for reference id is missing. Path properties.subnets[1].properties.networkSecurityGroup."
-      }
-    ]
-  }
-}"}]}}
-*/
 resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNet1) {
   name: virtualNetworkName
   location: location
@@ -642,14 +518,6 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
         properties: {
           addressPrefix: '172.20.0.0/24'
           privateEndpointNetworkPolicies: 'Enabled'
-          delegations: [
-            {
-              name: 'delegation'
-              properties: {
-                serviceName: 'Microsoft.DocumentDB/databaseAccounts'
-              }
-            }
-          ]
         }
       }
       {
@@ -666,33 +534,6 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
               }
             }
           ]
-          networkSecurityGroup: {
-            properties: {
-              securityRules: [
-                {
-                  properties: {
-                    direction: 'Inbound'
-                    protocol: '*'
-                    access: 'Allow'
-                  }
-                }
-                {
-                  properties: {
-                    direction: 'Outbound'
-                    protocol: '*'
-                    access: 'Allow'
-                  }
-                }
-              ]
-            }
-          }          
-        }
-      }
-      {
-        name: subnetAzureSql
-        properties: {
-          addressPrefix: '172.20.2.0/24'
-          privateEndpointNetworkPolicies: 'Disabled'
         }
       }
     ]
