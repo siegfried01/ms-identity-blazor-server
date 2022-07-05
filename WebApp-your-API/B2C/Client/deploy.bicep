@@ -118,7 +118,7 @@
  param azureSqlServerAdminPassword string
 
  @description('Are we using VNET to protect database?')
- param useVNet1 bool = false
+ param useVNet1 bool = true
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -596,62 +596,28 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
               }
             }
           ]
-          /*
-ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"NotFound","message":"{
-  "Code": "NotFound",
-  "Message": "Cannot find VirtualNetwork with name vnet-xyfolxgnipoog.",
-  "Target": null,
-  "Details": [
-    {
-      "Message": "Cannot find VirtualNetwork with name vnet-xyfolxgnipoog."
-    },
-    {
-      "Code": "NotFound"
-    },
-    {
-      "ErrorEntity": {
-        "ExtendedCode": "51004",
-        "MessageTemplate": "Cannot find {0} with name {1}.",
-        "Parameters": [
-          "VirtualNetwork",
-          "vnet-xyfolxgnipoog"
-        ],
-        "Code": "NotFound",
-        "Message": "Cannot find VirtualNetwork with name vnet-xyfolxgnipoog."
-      }
-    }
-  ],
-  "Innererror": null
-}"},{"code":"BadRequest","message":"{
-  "error": {
-    "code": "InvalidResourceReference",
-    "message": "Resource /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/RG_AADB2C_BLAZORSERVERDEMO/providers/Microsoft.Network/virtualNetworks/VNET-XYFOLXGNIPOOG referenced by resource /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/privateEndpoints/cosmosPrivateEndpoint was not found. Please make sure that the referenced resource exists, and that both resources are in the same region.",
-    "details": [
-      {
-        "code": "NotFound",
-        "message": "Resource /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/RG_AADB2C_BLAZORSERVERDEMO/providers/Microsoft.Network/virtualNetworks/VNET-XYFOLXGNIPOOG not found."
-      }
-    ]
-  }
-}"},{"code":"BadRequest","message":"{
+/*
+ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{
   "error": {
     "code": "InvalidRequestFormat",
     "message": "Cannot parse the request.",
     "details": [
       {
-        "code": "MissingJsonReferenceId",
-        "message": "Value for reference id is missing. Path properties.subnets[1].properties.networkSecurityGroup."
+        "code": "InvalidJsonReferenceFormat",
+        "message": "Reference Id /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups//subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/networkSecurityGroups/networkSecurityGroupName is not formatted correctly. The Id is expected to reference resources of type networkSecurityGroups. Path properties.subnets[0].properties.networkSecurityGroup."
       }
     ]
   }
-}"}]}}          
+}"}]}}
           */
           
           networkSecurityGroup: {
-            id: 'networkSecurityGroup'
+            id: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/networkSecurityGroups/networkSecurityGroupName'
             properties: {
               securityRules: [
                 {
+                  id: 'IdRule1'
+                  name: 'rule1'
                   properties: {
                     direction: 'Inbound'
                     protocol: '*'
@@ -659,6 +625,8 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
                   }
                 }
                 {
+                  id: 'IdRule2'
+                  name: 'rule2'
                   properties: {
                     direction: 'Outbound'
                     protocol: '*'
