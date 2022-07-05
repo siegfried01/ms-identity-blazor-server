@@ -13,6 +13,7 @@
 <!-- cosmos URI = @Configuration.GetSection("cosmosConfig")["uri"] = @Configuration["cosmosConfig:uri"] -->
 
 <table border="1">
+    <tr><td><label>User Assigned Service Principal ID</label></td><td><input @bind="userAssignedClientId" size="37"/></td><td><label>Default Azure Credential<input type="checkbox" @bind="defaultAzureCredential" /></label></td><td>&nbsp;</td></tr>
     <tr><td rowspan="2" colspan="2"><label>Value <input @bind="value" /></label></td><td><button @onclick="WriteToCosmosUsingManagedIdentity">Write to Cosmos Using Managed Identity</button></td><td><div style="border:double">@cosmosWriteStatus</div><div style="border:double">@cosmosReadStatus</div></td></tr>
     <tr><td><button @onclick="WriteToAzureSQLUsingManagedIdentity">Write to Azure SQL using Managed Identity</button> </td><td><div style="border:double">@azureSQLStatusManagedIdentity</div></td></tr>
     <tr><td><label>admin username:</label><input @bind="adminUsername" /></td><td><label>admin password: <input type="password" @bind="adminPassword" /></label></td><td><button @onclick="WriteToAzureSQLUsingAdminUsernamePassword">Write to Azure SQL using Admin & Password</button> </td><td><div style="border:double">@azureSQLStatusUsernamePassword</div></td></tr>
@@ -37,8 +38,6 @@
                     }
                 </table>
             </td>
-        </tr>
-        <tr>
             <td>
                 <table border="1">
                     @foreach (var r in azureCosmosRows)
@@ -73,6 +72,7 @@
     }
 
     List<AzureDocumentDbItems> azureCosmosRows = new List<AzureDocumentDbItems>();
+    bool defaultAzureCredential = true;
     string cosmosWriteStatus = "Normal";
     string cosmosReadStatus = "Normal";
     string azureSQLStatusUsernamePassword = "Normal";
@@ -81,6 +81,7 @@
     string adminUsername = "";
     string value { get; set; } = "Siegfried Heintze  1";
     string cosmosQueryString = "SELECT * FROM c";
+    string userAssignedClientId = "<uninitialized>";
     string increment(string value)
     {
         var regx = new System.Text.RegularExpressions.Regex(@"(\d)+");
@@ -186,7 +187,11 @@
     {
         var now = DateTime.Now;
         var nowString = now.ToString("yyyy MMMM dd HH:mm:ss.ffff (ddd)");
-        var credential = new DefaultAzureCredential();
+        userAssignedClientId = Configuration["userAssignedPrincipalId"];
+        // User Assigned Service Principal ID = feaa1d4d-d8fc-49fb-8316-bc34cd994d50
+        // xyfolxgnipoogweb.principalID = 9db8a871-108d-4eb5-8a03-ccdcf4464244
+        // 2022 July 03 22:47:17.7859 (Sun) (elapse=00:00:01.8132): Failure=Response status code does not indicate success: Forbidden (403); Substatus: 5301; ActivityId: 4badf8fe-04ab-44fc-9abc-08ddadfe95e8; Reason: (Request blocked by Auth cosmos-xyfolxgnipoog : Request is blocked because principal [9db8a871-108d-4eb5-8a03-ccdcf4464244] does not have required RBAC permissions to perform action [Microsoft.DocumentDB/databaseAccounts/readMetadata] on resource [/]. Learn more: https://aka.ms/cosmos-native-rbac. ActivityId: 4badf8fe-04ab-44fc-9abc-08ddadfe95e8, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
+        var credential = defaultAzureCredential?new DefaultAzureCredential():new DefaultAzureCredential(new DefaultAzureCredentialOptions { ManagedIdentityClientId = userAssignedClientId });
 
         var cosmosClient = new CosmosClient(Configuration["CosmosConfig:uri"], credential);
         var container = cosmosClient.GetContainer(Configuration["CosmosConfig:dbName"], Configuration["CosmosConfig:containerName"]);

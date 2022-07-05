@@ -1,5 +1,5 @@
 /*
-
+ * emacs 1: build and use powershell to assign roles
  * Begin commands to execute this file using Azure CLI with PowerShell
  * echo WaitForBuildComplete
  * WaitForBuildComplete
@@ -35,7 +35,7 @@
  * echo end create deployment group
  * End commands to execute this file using Azure CLI with Powershell
  *
- *
+ * emacs 2
  * Begin commands to execute this file using Azure CLI with PowerShell
  * echo CreateBuildEvent.exe
  * CreateBuildEvent.exe&
@@ -49,12 +49,67 @@
  * az.cmd deployment group create --mode complete --template-file ./clear-resources.json --resource-group rg_AADB2C_BlazorServerDemo
  * Get-AzResource -ResourceGroupName $rg | ft
  * write-output "begin purge key vault"
-
  * write-output "az.cmd keyvault purge --name $kv --location $loc --no-wait"
  * az.cmd keyvault purge --name $kv --location $loc --no-wait
  * BuildIsComplete.exe
  * echo all done
  * End commands to execute this file using Azure CLI with Powershell
+ *
+ * emacs 3: Deploy without using powsershell to assign roles to System Assigned SP
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * echo WaitForBuildComplete
+ * WaitForBuildComplete
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * echo Set-AzDefault -ResourceGroupName $rg 
+ * Set-AzDefault -ResourceGroupName $rg
+ * echo begin create deployment group
+ * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc 
+ * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
+ * write-output "principalId=${MI_PRINID}"
+ * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
+ * $accountName="cosmos-xyfolxgnipoog"
+ * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
+ * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
+ * write-output "az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg"
+ * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * echo end create deployment group
+ * End commands to execute this file using Azure CLI with Powershell
+ *
+ *
+ * emacs 4: Assign roles to System Assigned with powershell
+ * Begin commands to execute this file using Azure CLI with PowerShell
+ * $name='AADB2C_BlazorServerDemo'
+ * $rg="rg_$name"
+ * $loc='westus2'
+ * $accountName="cosmos-xyfolxgnipoog"
+ * $webappname="xyfolxgnipoogweb" 
+ * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
+ * write-output "principalId of website= $appId"
+ * $accountName="cosmos-xyfolxgnipoog"
+ * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
+ *     -ResourceGroupName $rg `
+ *     -Type CustomRole -RoleName SiegSystemAssignedRoles001 `
+ *     -DataAction @( `
+ *         'Microsoft.DocumentDB/databaseAccounts/readMetadata', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure', `
+ *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery') `
+ *     -AssignableScope "/"
+ * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
+ * echo idRole=$idRole
+ * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
+ * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
+ * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
+ * Get-AzResource -ResourceGroupName $rg | ft
+ * echo Assign roles to System Assigned with powershell
+ * End commands to execute this file using Azure CLI with Powershell
+ *
  */
 
 
@@ -63,8 +118,7 @@
  param azureSqlServerAdminPassword string
 
  @description('Are we using VNET to protect database?')
- param useVNet1 bool = true
- param useVNet2 bool = true
+ param useVNet1 bool = false
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
@@ -139,9 +193,8 @@ param publicNetworkAccess string = 'Enabled'
 param cosmosPrivateEndpointName string='cosmosPrivateEndpoint'
 
 param subnetCosmos string = 'subnetCosmos'
-param subnetWebsite string = 'subnetWebsite'
+param subnetWebsiteName string = 'subnetWebsite'
 param subnetAzureSql string = 'subnetAzureSql'
-param virtualNetworks_vnet_xyfolxgnipoog_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}'
 
 param privateDnsZones_dns_aadb2c_blazorserverdemo_name string = 'dns_aadb2c.blazorserverdemo'
 param virtualLinkName string = 'vnetlink001'
@@ -182,6 +235,12 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
     name: 'CosmosConfig:uri'
     properties: {
       value:  cosmosDbAccount.properties.documentEndpoint
+    }
+  }
+  resource userAssignedPrincipalId 'keyValues@2020-07-01-preview'={
+    name: 'userAssignedPrincipalId'
+    properties: {
+      value:  principalId
     }
   }
 
@@ -349,9 +408,14 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
 */
 
 
+param virtualNetworks_vnet_xyfolxgnipoog_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}'
 
 // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/web-app-managed-identity-sql-db/main.bicep#L73
 resource web 'Microsoft.Web/sites@2020-12-01' = {
+  dependsOn: [
+    VirtualNetwork
+    cosmosPrivateEndpoint
+  ]
   name: '${name}web'
   location: location
   identity: {
@@ -367,7 +431,12 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
      //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
      // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
 
-    virtualNetworkSubnetId: '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite'
+    //virtualNetworkSubnetId: '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite'
+    //virtualNetworkSubnetId: subnetWebsiteName
+    //virtualNetworkSubnetId: '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}/subnets/subnetWebsite'
+    //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}/subnets/subnetWebsite'
+    // see https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/app-service-regional-vnet-integration/main.bicep#L57 for a simple example:
+    virtualNetworkSubnetId: useVNet1? VirtualNetwork.properties.subnets[0].id : json('null')
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -514,14 +583,7 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
     }
     subnets: [
       {
-        name: subnetCosmos
-        properties: {
-          addressPrefix: '172.20.0.0/24'
-          privateEndpointNetworkPolicies: 'Enabled'
-        }
-      }
-      {
-        name: subnetWebsite
+        name: subnetWebsiteName
         properties: {
           addressPrefix: '172.20.1.0/24'
           privateEndpointNetworkPolicies: 'Enabled'
@@ -584,7 +646,9 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
   }
 }"}]}}          
           */
+          
           networkSecurityGroup: {
+            id: 'networkSecurityGroup'
             properties: {
               securityRules: [
                 {
@@ -603,15 +667,27 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
                 }
               ]
             }
-          }          
+          }    
+               
         }
       }
+      {
+        name: subnetCosmos
+        properties: {
+          addressPrefix: '172.20.0.0/24'
+          privateEndpointNetworkPolicies: 'Enabled'
+        }
+      }
+
     ]
   }
 }
 
 resource cosmosPrivateEndpoint 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNet1) {
   name: cosmosPrivateEndpointName
+  dependsOn: [
+    VirtualNetwork
+  ]
   location: location
   properties: {
     subnet: {
