@@ -72,7 +72,7 @@
     }
 
     List<AzureDocumentDbItems> azureCosmosRows = new List<AzureDocumentDbItems>();
-    bool defaultAzureCredential = true;
+    bool defaultAzureCredential = false;
     string cosmosWriteStatus = "Normal";
     string cosmosReadStatus = "Normal";
     string azureSQLStatusUsernamePassword = "Normal";
@@ -192,6 +192,7 @@
         // xyfolxgnipoogweb.principalID = 9db8a871-108d-4eb5-8a03-ccdcf4464244
         // 2022 July 03 22:47:17.7859 (Sun) (elapse=00:00:01.8132): Failure=Response status code does not indicate success: Forbidden (403); Substatus: 5301; ActivityId: 4badf8fe-04ab-44fc-9abc-08ddadfe95e8; Reason: (Request blocked by Auth cosmos-xyfolxgnipoog : Request is blocked because principal [9db8a871-108d-4eb5-8a03-ccdcf4464244] does not have required RBAC permissions to perform action [Microsoft.DocumentDB/databaseAccounts/readMetadata] on resource [/]. Learn more: https://aka.ms/cosmos-native-rbac. ActivityId: 4badf8fe-04ab-44fc-9abc-08ddadfe95e8, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
         var credential = defaultAzureCredential?new DefaultAzureCredential():new DefaultAzureCredential(new DefaultAzureCredentialOptions { ManagedIdentityClientId = userAssignedClientId });
+        WriteLine($"WriteToCosmosUsingManagedIdentity: defaultAzureCredential = {defaultAzureCredential}");
 
         var cosmosClient = new CosmosClient(Configuration["CosmosConfig:uri"], credential);
         var container = cosmosClient.GetContainer(Configuration["CosmosConfig:dbName"], Configuration["CosmosConfig:containerName"]);

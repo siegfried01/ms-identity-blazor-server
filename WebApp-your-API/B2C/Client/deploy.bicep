@@ -55,7 +55,7 @@
  * echo all done
  * End commands to execute this file using Azure CLI with Powershell
  *
- * emacs 3: Deploy without using powsershell to assign roles to System Assigned SP
+ * emacs 3: Deploy without using powsershell to assign roles to System Assigned SP and NO vnet
  * Begin commands to execute this file using Azure CLI with PowerShell
  * echo WaitForBuildComplete
  * WaitForBuildComplete
@@ -69,7 +69,7 @@
  * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
  * write-output "principalId=${MI_PRINID}"
  * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=false managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
  * $accountName="cosmos-xyfolxgnipoog"
  * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
@@ -80,7 +80,7 @@
  * End commands to execute this file using Azure CLI with Powershell
  *
  *
- * emacs 4: Assign roles to System Assigned with powershell
+ * emacs 4: Assign roles to System Assigned with powershell (no deployment)
  * Begin commands to execute this file using Azure CLI with PowerShell
  * $name='AADB2C_BlazorServerDemo'
  * $rg="rg_$name"
