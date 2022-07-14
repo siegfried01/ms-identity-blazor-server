@@ -33,6 +33,7 @@ resource roleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinition
         dataActions: [
           'Microsoft.DocumentDB/databaseAccounts/readMetadata'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/read'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeStoredProcedure'

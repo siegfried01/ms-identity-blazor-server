@@ -66,10 +66,11 @@
  * Set-AzDefault -ResourceGroupName $rg
  * echo begin create deployment group
  * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc 
- * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
- * write-output "principalId=${MI_PRINID}"
+ * $MI_PRINID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
+ * $MI_CLIENTID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "clientId" -o tsv)
+ * write-output "principalId=${MI_PRINID} MI_CLIENTID=${MI_CLIENTID}"
  * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=false managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=false managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
  * $accountName="cosmos-xyfolxgnipoog"
  * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
@@ -122,8 +123,13 @@
 
 @description('AAD Object ID of the developer so s/he can access key vault when running on development')
 param ownerId string
+
 @description('Principal ID of the managed identity')
 param principalId string
+
+@description('Crincipal ID of the managed identity')
+param clientId string
+
 @description('The base name for resources')
 param name string = uniqueString(resourceGroup().id)
 
@@ -241,6 +247,13 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
     name: 'userAssignedPrincipalId'
     properties: {
       value:  principalId
+    }
+  }
+
+  resource userAssignedClientId 'keyValues@2020-07-01-preview'={
+    name: 'userAssignedClientId'
+    properties: {
+      value:  clientId
     }
   }
 
@@ -610,7 +623,7 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
   }
 }"}]}}
           */
-          
+          // https://docs.microsoft.com/en-us/azure/templates/microsoft.network/networksecuritygroups?tabs=bicep          
           networkSecurityGroup: {
             id: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/networkSecurityGroups/networkSecurityGroupName'
             properties: {
