@@ -2,7 +2,7 @@ name: Build and deploy .NET Core app to Linux WebApp xyfolxgnipoogweb
 on:
   push:
     branches:
-    - main
+    - release
 env:
   AZURE_WEBAPP_NAME: xyfolxgnipoogweb
   AZURE_WEBAPP_PACKAGE_PATH: Client/publish

@@ -1,5 +1,6 @@
 /*
- * emacs 1: build and use powershell to assign roles
+ *
+ * emacs 1: Deploy without using powsershell to assign roles to System Assigned SP and NO vnet
  * Begin commands to execute this file using Azure CLI with PowerShell
  * echo WaitForBuildComplete
  * WaitForBuildComplete
@@ -10,32 +11,21 @@
  * Set-AzDefault -ResourceGroupName $rg
  * echo begin create deployment group
  * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc 
- * $MI_PRINID=$(az identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
- * write-output "principalId=${MI_PRINID}"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID
- * $accountName="cosmos-xyfolxgnipoog"
- * $webappname="xyfolxgnipoogweb" 
- * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
- * echo $appId
- * $accountName="cosmos-xyfolxgnipoog"
- * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
- *     -ResourceGroupName $rg `
- *     -Type CustomRole -RoleName SiegReadWriteRole007 `
- *     -DataAction @( `
- *         'Microsoft.DocumentDB/databaseAccounts/readMetadata',
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*', `
- *         'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*') `
- *     -AssignableScope "/"
- * $idRole=$(az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg -o tsv --query [0].id)
- * echo idRole=$idRole
- * New-AzCosmosDBSqlRoleAssignment -AccountName $accountName -ResourceGroupName $rg -RoleDefinitionId $idRole -Scope "/dbs/rbacsample" -PrincipalId $appId
+ * $MI_PRINID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
+ * $MI_CLIENTID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "clientId" -o tsv)
+ * write-output "principalId=${MI_PRINID} MI_CLIENTID=${MI_CLIENTID}"
+ * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=true managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
+ * $accountName="xyfolxgnipoog-cosmosdb"
+ * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
+ * write-output "az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg"
  * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
  * Get-AzResource -ResourceGroupName $rg | ft
  * echo end create deployment group
  * End commands to execute this file using Azure CLI with Powershell
  *
- * emacs 2
+ * emacs 2: Shutdown website & database
  * Begin commands to execute this file using Azure CLI with PowerShell
  * echo CreateBuildEvent.exe
  * CreateBuildEvent.exe&
@@ -55,42 +45,15 @@
  * echo all done
  * End commands to execute this file using Azure CLI with Powershell
  *
- * emacs 3: Deploy without using powsershell to assign roles to System Assigned SP and NO vnet
- * Begin commands to execute this file using Azure CLI with PowerShell
- * echo WaitForBuildComplete
- * WaitForBuildComplete
- * $name='AADB2C_BlazorServerDemo'
- * $rg="rg_$name"
- * $loc='westus2'
- * echo Set-AzDefault -ResourceGroupName $rg 
- * Set-AzDefault -ResourceGroupName $rg
- * echo begin create deployment group
- * az.cmd identity create --name umid-cosmosid --resource-group $rg --location $loc 
- * $MI_PRINID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "principalId" -o tsv)
- * $MI_CLIENTID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "clientId" -o tsv)
- * write-output "principalId=${MI_PRINID} MI_CLIENTID=${MI_CLIENTID}"
- * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=false managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
- * $accountName="cosmos-xyfolxgnipoog"
- * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
- * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
- * write-output "az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg"
- * az.cmd cosmosdb sql role assignment list --account-name $accountName --resource-group $rg
- * Get-AzResource -ResourceGroupName $rg | ft
- * echo end create deployment group
- * End commands to execute this file using Azure CLI with Powershell
- *
- *
- * emacs 4: Assign roles to System Assigned with powershell (no deployment)
+ * emacs 3: Assign roles to System Assigned with powershell (no deployment). This is superfluous
  * Begin commands to execute this file using Azure CLI with PowerShell
  * $name='AADB2C_BlazorServerDemo'
  * $rg="rg_$name"
  * $loc='westus2'
- * $accountName="cosmos-xyfolxgnipoog"
- * $webappname="xyfolxgnipoogweb" 
+ * $accountName="xyfolxgnipoog-cosmosdb"
+ * $webappname="xyfolxgnipoog-web" 
  * $appId=(Get-AzWebApp -ResourceGroupName $rg -Name $webappname).Identity.PrincipalId
  * write-output "principalId of website= $appId"
- * $accountName="cosmos-xyfolxgnipoog"
  * New-AzCosmosDBSqlRoleDefinition -AccountName $accountName `
  *     -ResourceGroupName $rg `
  *     -Type CustomRole -RoleName SiegSystemAssignedRoles001 `
@@ -121,13 +84,13 @@
  @description('Are we using VNET to protect database?')
  param useVNet1 bool = true
 
-@description('AAD Object ID of the developer so s/he can access key vault when running on development')
+@description('AAD Object ID of the developer so s/he can access key vault when running on development/deskop computer')
 param ownerId string
 
-@description('Principal ID of the managed identity')
+@description('Principal ID of the managed identity Service Principal (used to grant permissions to the database)')
 param principalId string
 
-@description('Crincipal ID of the managed identity')
+@description('Client ID of the managed identity Service Principal (Passed to the ASP.NET Core app)')
 param clientId string
 
 @description('The base name for resources')
@@ -181,12 +144,12 @@ param configSku string = 'free'
 
 // begin VNET params
 @description('Virtual network name')
-param virtualNetworkName string ='vnet-${uniqueString(resourceGroup().id)}'
+param virtualNetworkName string ='${uniqueString(resourceGroup().id)}-vnet'
 
 @description('Cosmos DB account name (must contain only lowercase letters, digits, and hyphens)')
 @minLength(3)
 @maxLength(44)
-param cosmosAccountName string = 'cosmos-${uniqueString(resourceGroup().id)}'
+param cosmosAccountName string = '${uniqueString(resourceGroup().id)}-cosmosdb'
 
 @description('Enable public network traffic to access the account; if set to Disabled, public network traffic will be blocked even before the private endpoint is created')
 @allowed([
@@ -198,11 +161,9 @@ param publicNetworkAccess string = 'Enabled'
 @description('Private endpoint name')
 param cosmosPrivateEndpointName string='cosmosPrivateEndpoint'
 
-param subnetCosmos string = 'subnetCosmos'
 param subnetWebsiteName string = 'subnetWebsite'
-param subnetAzureSql string = 'subnetAzureSql'
 
-param privateDnsZones_dns_aadb2c_blazorserverdemo_name string = 'dns_aadb2c.blazorserverdemo'
+param privateDnsZone_name string = 'dns_aadb2c.blazorserverdemo'
 param virtualLinkName string = 'vnetlink001'
 param privateDnsHost string = 'azureprivatedns.net'
 
@@ -212,10 +173,8 @@ param privateDnsHost string = 'azureprivatedns.net'
 @secure()
 param dockerhubPassword string
 param dockerUsername string = 'siegfried01'
-
 // https://stackoverflow.com/questions/34198392/docker-official-registry-docker-hub-url get info on dockerhub
 //output dockerhubCreds object = appConfigNew
-
 
 resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
   name: '${name}-config'
@@ -243,14 +202,14 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
       value:  cosmosDbAccount.properties.documentEndpoint
     }
   }
-  resource userAssignedPrincipalId 'keyValues@2020-07-01-preview'={
+  resource userAssignedPrincipalId 'keyValues@2020-07-01-preview'={  // This is now superfluous except for tutorial purposes
     name: 'userAssignedPrincipalId'
     properties: {
       value:  principalId
     }
   }
 
-  resource userAssignedClientId 'keyValues@2020-07-01-preview'={
+  resource userAssignedClientId 'keyValues@2020-07-01-preview'={ // This is used by default azure credential call
     name: 'userAssignedClientId'
     properties: {
       value:  clientId
@@ -298,7 +257,7 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
 
 resource kv 'Microsoft.KeyVault/vaults@2019-09-01' = {
   // Make sure the Key Vault name begins with a letter.
-  name: 'kv-${name}'
+  name: '${name}-kv'
   location: location
   properties: {
     sku: {
@@ -386,50 +345,9 @@ resource msi 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30'  exis
   name: managedIdentityName
 }
 
-/*
-virtualNetworkSubnetId (see below in resource webApp) is causing this error:
-
-ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{
-  "Code": "BadRequest",
-  "Message": "Subnet vnet-xyfolxgnipoog in VNET subnetWebsite is missing a delegation to Microsoft.Web/serverFarms. Please add the delegation and try again.",
-  "Target": null,
-  "Details": [
-    {
-      "Message": "Subnet vnet-xyfolxgnipoog in VNET subnetWebsite is missing a delegation to Microsoft.Web/serverFarms. Please add the delegation and try again."
-    },
-    {
-      "Code": "BadRequest"
-    },
-    {
-      "ErrorEntity": {
-        "ExtendedCode": "55928",
-        "MessageTemplate": "Subnet {0} in VNET {1} is missing a delegation to {2}. Please add the delegation and try again.",
-        "Parameters": [
-          "vnet-xyfolxgnipoog",
-          "subnetWebsite",
-          "Microsoft.Web/serverFarms"
-        ],
-        "Code": "BadRequest",
-        "Message": "Subnet vnet-xyfolxgnipoog in VNET subnetWebsite is missing a delegation to Microsoft.Web/serverFarms. Please add the delegation and try again."
-      }
-    }
-  ],
-  "Innererror": null
-}"}]}}
-
-
-*/
-
-
-param virtualNetworks_vnet_xyfolxgnipoog_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}'
-
 // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/web-app-managed-identity-sql-db/main.bicep#L73
 resource web 'Microsoft.Web/sites@2020-12-01' = {
-  dependsOn: [
-    VirtualNetwork
-    cosmosPrivateEndpoint
-  ]
-  name: '${name}web'
+  name: '${name}-web'
   location: location
   identity: {
     type: 'SystemAssigned, UserAssigned'
@@ -440,16 +358,7 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
     serverFarmId: plan.id   
-    // This does the VNET integration for S1
-     //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${VirtualNetwork.name}/subnets/${subnetWebsite}'
-     // /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/vnet-xyfolxgnipoog
-
-    //virtualNetworkSubnetId: '${virtualNetworks_vnet_xyfolxgnipoog_externalid}/subnets/subnetWebsite'
-    //virtualNetworkSubnetId: subnetWebsiteName
-    //virtualNetworkSubnetId: '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}/subnets/subnetWebsite'
-    //virtualNetworkSubnetId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/virtualNetworks/${virtualNetworkName}/subnets/subnetWebsite'
-    // see https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/app-service-regional-vnet-integration/main.bicep#L57 for a simple example:
-    virtualNetworkSubnetId: useVNet1? VirtualNetwork.properties.subnets[0].id : json('null')
+    virtualNetworkSubnetId: useVNet1 ? VirtualNetwork.properties.subnets[0].id : json('null')
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -554,14 +463,9 @@ resource containerData 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/conta
   }
 }
 
-
-
-// begin Sql Database
-// end Sql Database
-
 var principals =   [ 
   principalId
-  ownerId
+  ownerId // this is for local debugging on local development computer
   // web.identity.principalId
 ]
 
@@ -578,11 +482,6 @@ module cosmosRole 'cosmosRole.bicep' = [for (princId, jj) in principals: {
 }]
 
 
-// Access from azure webapp to cosmos DB was working via RBAC and then added AnuragSharma-MSFT's script to constrain access cosmos database via VNET.
-// New error message: 2022 April 25 22:59:57.1890 (Mon): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47; Reason: (Request originated from IP 20.69.64.79 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 36b85649-d9e4-493f-9755-8aef38a9db47, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
-//                    2022 April 26 01:35:06.7308 (Tue): Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 84239951-6e27-4e84-b08f-4e0d5f5c97d6; Reason: (Request originated from IP 20.72.222.133 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 84239951-6e27-4e84-b08f-4e0d5f5c97d6, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
-// Perhaps the problem is that I'm not including the VNET? How do I do that?
-// 2022 June 22 13:48:10.2817 (Wed) (elapse=00:00:02.4399): Failure=Response status code does not indicate success: Forbidden (403); Substatus: 0; ActivityId: 4bbfb5ae-fc75-4de1-8414-f1539e8baa15; Reason: (Request originated from IP 40.64.110.93 through public internet. This is blocked by your Cosmos DB account firewall settings. More info: https://aka.ms/cosmosdb-tsg-forbidden ActivityId: 4bbfb5ae-fc75-4de1-8414-f1539e8baa15, Microsoft.Azure.Documents.Common/2.14.0, Linux/10 cosmos-netstandard-sdk/3.24.1);
 // begin VNET resources
 
 resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (useVNet1) {
@@ -609,99 +508,58 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
               }
             }
           ]
-/*
- ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{
-  "error": {
-    "code": "InvalidRequestFormat",
-    "message": "Cannot parse the request.",
-    "details": [
-      {
-        "code": "InvalidJsonReferenceFormat",
-        "message": "Reference Id /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups//subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_AADB2C_BlazorServerDemo/providers/Microsoft.Network/networkSecurityGroups/networkSecurityGroupName is not formatted correctly. The Id is expected to reference resources of type networkSecurityGroups. Path properties.subnets[0].properties.networkSecurityGroup."
-      }
-    ]
-  }
-}"}]}}
-          */
-          // https://docs.microsoft.com/en-us/azure/templates/microsoft.network/networksecuritygroups?tabs=bicep          
-          networkSecurityGroup: {
-            id: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().id}/providers/Microsoft.Network/networkSecurityGroups/networkSecurityGroupName'
-            properties: {
-              securityRules: [
-                {
-                  id: 'IdRule1'
-                  name: 'rule1'
-                  properties: {
-                    direction: 'Inbound'
-                    protocol: '*'
-                    access: 'Allow'
-                  }
-                }
-                {
-                  id: 'IdRule2'
-                  name: 'rule2'
-                  properties: {
-                    direction: 'Outbound'
-                    protocol: '*'
-                    access: 'Allow'
-                  }
-                }
-              ]
-            }
-          }    
-               
         }
       }
-      {
-        name: subnetCosmos
-        properties: {
-          addressPrefix: '172.20.0.0/24'
-          privateEndpointNetworkPolicies: 'Enabled'
-        }
-      }
-
     ]
   }
 }
-
-resource cosmosPrivateEndpoint 'Microsoft.Network/privateEndpoints@2020-07-01' =  if (useVNet1) {
-  name: cosmosPrivateEndpointName
-  dependsOn: [
-    VirtualNetwork
-  ]
+// https://docs.microsoft.com/en-us/azure/templates/microsoft.network/networksecuritygroups?tabs=bicep          
+resource nsg 'Microsoft.Network/networkSecurityGroups@2020-06-01'  =  if (useVNet1) {
+  name: '${name}-nsg'
   location: location
   properties: {
-    subnet: {
-      id: resourceId('Microsoft.Network/VirtualNetworks/subnets', virtualNetworkName, subnetCosmos)
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'MyConnection'
-        properties: {
-          privateLinkServiceId: cosmosDbAccount.id
-          groupIds: [
-            'Sql'
-          ]
-        }
-      }
-    ]
+      securityRules: [
+          {
+              id: 'IdRule1'
+              name: 'rule1'
+                  properties: {
+                  direction: 'Inbound'
+                  protocol: '*'
+                  sourcePortRange :  '*'
+                  destinationPortRange :  '22'
+                  sourceAddressPrefix :  '*'
+                  destinationAddressPrefix: '*'
+                  priority : 1010
+                  access: 'Allow'
+              }
+          }
+          {
+              id: 'IdRule2'
+              name: 'rule2'
+              properties: {
+                  direction: 'Outbound'
+                  protocol: '*'
+                  sourcePortRange :  '*'
+                  destinationPortRange :  '22'
+                  sourceAddressPrefix :  '*'
+                  destinationAddressPrefix: '*'
+                  priority : 1011
+                  access: 'Allow'
+              }
+          }
+      ]
   }
 }
 
-// ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"PreconditionFailed","message":"{
-//  "code": "PreconditionFailed",
-//  "message": "There is already an operation in progress which requires exclusive lock on this service cosmos-xyfolxgnipoog. Please retry the operation after sometime.
-// ActivityId: 3c6f5526-a67a-4908-8cd9-c4bb6533ba20, Microsoft.Azure.Documents.Common/2.14.0"
-
-resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = if (useVNet1){
-  name: privateDnsZones_dns_aadb2c_blazorserverdemo_name
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2018-09-01' = if (useVNet1){
+  name: privateDnsZone_name
   location: 'global'
   properties: {
   }
 }
 
-resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_dns_aadb2c_blazorserverdemo_name 'Microsoft.Network/privateDnsZones/SOA@2018-09-01' = if (useVNet1){
-  parent: privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource
+resource Microsoft_Network_privateDnsZones_SOA_privateDnsZone_name 'Microsoft.Network/privateDnsZones/SOA@2018-09-01' = if (useVNet1){
+  parent: privateDnsZone
   name: '@'
   properties: {
     ttl: 3600
@@ -717,8 +575,8 @@ resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_dns_aadb2c_blazor
   }
 }
 
-resource privateDnsZones_dns_aadb2c_blazorserverdemo_name_virtnetlnk001 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if (useVNet1){
-  parent: privateDnsZones_dns_aadb2c_blazorserverdemo_name_resource
+resource privateDnsZone_name_virtnetlnk001 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if (useVNet1){
+  parent: privateDnsZone
   name: virtualLinkName
   location: 'global'
   properties: {
