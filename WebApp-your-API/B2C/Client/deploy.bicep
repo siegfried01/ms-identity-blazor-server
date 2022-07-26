@@ -15,7 +15,7 @@
  * $MI_CLIENTID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "clientId" -o tsv)
  * write-output "principalId=${MI_PRINID} MI_CLIENTID=${MI_CLIENTID}"
  * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=true managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=false managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
  * $accountName="xyfolxgnipoog-cosmosdb"
  * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
@@ -358,7 +358,7 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
     serverFarmId: plan.id   
-    virtualNetworkSubnetId: useVNet1 ? VirtualNetwork.properties.subnets[0].id : json('null')
+    //virtualNetworkSubnetId: useVNet1 ? VirtualNetwork.properties.subnets[0].id : json('null')
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -417,12 +417,12 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2022-02-15-previ
     enableAutomaticFailover: false
     enableMultipleWriteLocations: false
     isVirtualNetworkFilterEnabled: true
-    virtualNetworkRules: [
+    virtualNetworkRules: useVNet1 ? [
       {
         id: VirtualNetwork.properties.subnets[0].id
         ignoreMissingVNetServiceEndpoint: false
       }
-    ]
+    ]  : []
     disableKeyBasedMetadataWriteAccess: false
     enableFreeTier: true
     enableAnalyticalStorage: false
@@ -448,6 +448,29 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2022-02-15-previ
     capabilities: [
       {
         name: 'EnableServerless'
+      }
+    ]
+    ipRules: [
+      {
+        ipAddressOrRange: '73.157.111.87'
+      }
+      {
+        ipAddressOrRange: '104.42.195.92'
+      }
+      {
+        ipAddressOrRange: '40.76.54.131'
+      }
+      {
+        ipAddressOrRange: '52.176.6.30'
+      }
+      {
+        ipAddressOrRange: '52.169.50.45'
+      }
+      {
+        ipAddressOrRange: '52.187.184.26'
+      }
+      {
+        ipAddressOrRange: '0.0.0.0'
       }
     ]
     backupPolicy: {
