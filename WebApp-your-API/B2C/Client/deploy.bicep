@@ -408,13 +408,35 @@ output vaultUrl string = kv.properties.vaultUri
 var dbName = 'rbacsample'
 var containerName = 'data'
 // Cosmos DB Account
-resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2021-06-15' = {
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2022-02-15-preview' = {
   name: cosmosAccountName
   location: location
   kind: 'GlobalDocumentDB'
   properties: {
+    publicNetworkAccess: publicNetworkAccess
+    enableAutomaticFailover: false
+    enableMultipleWriteLocations: false
+    isVirtualNetworkFilterEnabled: true
+    virtualNetworkRules: [
+      {
+        id: VirtualNetwork.properties.subnets[0].id
+        ignoreMissingVNetServiceEndpoint: false
+      }
+    ]
+    disableKeyBasedMetadataWriteAccess: false
+    enableFreeTier: true
+    enableAnalyticalStorage: false
+    analyticalStorageConfiguration: {
+      schemaType: 'WellDefined'
+    }
+    databaseAccountOfferType: 'Standard'
+    defaultIdentity: 'FirstPartyIdentity'
+    networkAclBypass: 'None'
+    disableLocalAuth: false // switch to 'true', if you want to disable connection strings/keys 
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
+      maxIntervalInSeconds: 5
+      maxStalenessPrefix: 100
     }
     locations: [
       {
@@ -428,11 +450,14 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2021-06-15' = {
         name: 'EnableServerless'
       }
     ]
-    disableLocalAuth: false // switch to 'true', if you want to disable connection strings/keys 
-    databaseAccountOfferType: 'Standard'
-    enableAutomaticFailover: false
-    publicNetworkAccess: publicNetworkAccess
-    enableMultipleWriteLocations: false
+    backupPolicy: {
+      type: 'Periodic'
+      periodicModeProperties: {
+        backupIntervalInMinutes: 1400 //1400/60==23.33
+        backupRetentionIntervalInHours: 8
+        backupStorageRedundancy: 'Local'
+      }
+    }
   }
 }
 
@@ -451,13 +476,38 @@ resource containerData 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/conta
   name: '${cosmosDbDatabase.name}/${containerName}'
   location: location
   properties: {
+    options: {
+      // autoscaleSettings: { maxThroughput: 400 }
+      // throughput: 400 // not supported for serverless
+    }
     resource: {
       id: containerName
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
       partitionKey: {
         paths: [
           '/partitionKey'
         ]
         kind: 'Hash'
+      }
+      uniqueKeyPolicy: {
+        uniqueKeys: []
+      }
+      conflictResolutionPolicy: {
+        mode: 'LastWriterWins'
+        conflictResolutionPath: '/_ts'
       }
     }
   }
@@ -498,7 +548,6 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
         name: subnetWebsiteName
         properties: {
           addressPrefix: '172.20.1.0/24'
-          privateEndpointNetworkPolicies: 'Enabled'
           // steal code from https://github.com/Azure/bicep/blob/main/docs/examples/101/app-service-regional-vnet-integration/main.bicep#L37
           delegations: [
             {
@@ -508,6 +557,19 @@ resource VirtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01'  = if (us
               }
             }
           ]
+          networkSecurityGroup: {
+            id: nsg.id
+          }
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.AzureCosmosDB'
+              locations: [
+                '*'
+              ]
+            }
+          ]
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
         }
       }
     ]
