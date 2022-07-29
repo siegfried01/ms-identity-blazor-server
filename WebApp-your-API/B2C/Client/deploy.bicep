@@ -15,7 +15,7 @@
  * $MI_CLIENTID=$(az.cmd identity show -n umid-cosmosid -g $rg --query "clientId" -o tsv)
  * write-output "principalId=${MI_PRINID} MI_CLIENTID=${MI_CLIENTID}"
  * write-output "az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep"
- * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=false managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
+ * az.cmd deployment group create --name $name --resource-group $rg   --template-file deploy.bicep  --parameters '@deploy.parameters.json' --parameters useVNet1=true managedIdentityName=umid-cosmosid ownerId=$env:AZURE_OBJECTID --parameters principalId=$MI_PRINID clientId=$MI_CLIENTID
  * $accountName="xyfolxgnipoog-cosmosdb"
  * write-output "az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg"
  * az.cmd cosmosdb sql role definition list --account-name $accountName --resource-group $rg
@@ -141,7 +141,6 @@ param webPlanSku string = useVNet1?'S1':'F1'
 ])
 param configSku string = 'free'
 
-
 // begin VNET params
 @description('Virtual network name')
 param virtualNetworkName string ='${uniqueString(resourceGroup().id)}-vnet'
@@ -256,6 +255,10 @@ resource config 'Microsoft.AppConfiguration/configurationStores@2020-06-01' = {
 }
 
 resource kv 'Microsoft.KeyVault/vaults@2019-09-01' = {
+  dependsOn:[
+    web[0]
+    web[1]
+  ]
   // Make sure the Key Vault name begins with a letter.
   name: '${name}-kv'
   location: location
@@ -277,7 +280,17 @@ resource kv 'Microsoft.KeyVault/vaults@2019-09-01' = {
       }
       {
         tenantId: subscription().tenantId
-        objectId: web.identity.principalId
+        objectId: web[0].identity.principalId
+        permissions: {
+          // Secrets are referenced by and enumerated in App Configuration so 'list' is not necessary.
+          secrets: [
+            'get'
+          ]
+        }
+      }
+      {
+        tenantId: subscription().tenantId
+        objectId: web[1].identity.principalId
         permissions: {
           // Secrets are referenced by and enumerated in App Configuration so 'list' is not necessary.
           secrets: [
@@ -345,9 +358,13 @@ resource msi 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30'  exis
   name: managedIdentityName
 }
 
+param titles  array=[
+  'blazorapp inside VNET'
+  'blazorapp outside VNET'
+]
 // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/web-app-managed-identity-sql-db/main.bicep#L73
-resource web 'Microsoft.Web/sites@2020-12-01' = {
-  name: '${name}-web'
+resource web 'Microsoft.Web/sites@2020-12-01' =[ for (title, jj) in titles:  {
+  name: '${name}-web-${jj}'
   location: location
   identity: {
     type: 'SystemAssigned, UserAssigned'
@@ -358,7 +375,7 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     httpsOnly: true         // https://stackoverflow.com/questions/54534924/arm-template-for-to-configure-app-services-with-new-vnet-integration-feature/59857601#59857601
     serverFarmId: plan.id   
-    //virtualNetworkSubnetId: useVNet1 ? VirtualNetwork.properties.subnets[0].id : json('null')
+    virtualNetworkSubnetId: (useVNet1 && jj==0)? VirtualNetwork.properties.subnets[0].id : null
     siteConfig: {
       appSettings: [ // https://github.com/Azure/azure-quickstart-templates/blob/master/quickstarts/microsoft.web/documentdb-webapp/main.bicep
         {
@@ -368,6 +385,10 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
         {
           name: 'DOCUMENTDB_PRIMARY_KEY'
           value: cosmosDbAccount.listKeys().primaryMasterKey
+        }
+        {
+          name: 'TITLE'
+          value: '${title} useVnet1: ${useVNet1} jj: ${jj}'
         }
       ]
       //linuxFxVersion: 'DOCKER|siegfried01/blazorserverclient:latest'
@@ -380,26 +401,31 @@ resource web 'Microsoft.Web/sites@2020-12-01' = {
       ]
     }
   }
+} ]
 
-  resource logs 'config' = {
-    name: 'logs'
-    properties: {
-      applicationLogs: {
-        fileSystem: {
-          level: 'Warning'
-        }
+resource logs 'Microsoft.Web/sites/config@2020-12-01' =[ for (title, jj) in titles:   {
+  dependsOn:[
+    web[0]
+    web[1]
+  ]
+  name: '${name}-web-${jj}/logs'
+  properties: {
+    applicationLogs: {
+      fileSystem: {
+        level: 'Warning'
       }
-      httpLogs: {
-        fileSystem: {
-          enabled: true
-        }
-      }
-      detailedErrorMessages: {
+    }
+    httpLogs: {
+      fileSystem: {
         enabled: true
       }
     }
+    detailedErrorMessages: {
+      enabled: true
+    }
   }
-}
+}]
+
 
 
 output appConfigConnectionString string = listKeys(config.id, config.apiVersion).value[0].connectionString

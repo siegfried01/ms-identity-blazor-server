@@ -11,7 +11,10 @@
 <UserClaims />
 <hr />
 <!-- cosmos URI = @Configuration.GetSection("cosmosConfig")["uri"] = @Configuration["cosmosConfig:uri"] -->
-
+<div>
+TITLE=@Configuration["TITLE"]
+</div>
+<hr/>
 <table border="1">
     <tr><td><label>User Assigned Service Principal ID</label></td><td><input @bind="userAssignedPrincipalId" size="37"/></td><td><label>Default Azure Credential<input type="checkbox" @bind="useDefaultAzureCredential" /></label></td><td>&nbsp;</td></tr>
     <tr><td><label>User Assigned Client ID</label></td><td><input @bind="userAssignedClientId" size="37"/></td><td><label>Use Client ID instead of SP ID <input type="checkbox" @bind="useClientIdInsteadOfSPId"/></label></td><td>&nbsp;</td></tr>
