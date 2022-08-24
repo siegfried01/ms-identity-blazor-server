@@ -27,6 +27,11 @@ bld/
 [Oo]bj/
 [Ll]og/
 
+WebApp-your-API/B2C/Client/Properties/PublishProfiles/
+WebApp-your-API/B2C/Client/Properties/ServiceDependencies/
+WebApp-your-API/B2C/Client/old/
+WebApp-your-API/B2C/Client/TemplatesExportedFromPortal/
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot

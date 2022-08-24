@@ -10,6 +10,7 @@ using Microsoft.Identity.Web;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using TodoListService.AuthorizationPolicies;
+using static System.Console;
 
 namespace TodoListService
 {
@@ -25,6 +26,7 @@ namespace TodoListService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            WriteLine($"Configure Service: begin {nameof(StartupBlazorServerAADClientCallWebAPI)}");
             // Adds Microsoft Identity platform (AAD v2.0) support to protect this Api
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                    .AddMicrosoftIdentityWebApi(options =>
@@ -38,15 +40,22 @@ namespace TodoListService
             services.AddControllers();
             services.AddAuthorization(options =>
             {
+                WriteLine($"Service: Adding authorization policies");
                 // Create policy to check for the scope 'read'
                 options.AddPolicy("ReadScope",
-                    policy => policy.Requirements.Add(new ScopesRequirement(Configuration["ReadScope"])));
+                    policy =>
+                    {
+                        string acceptedScopes = Configuration["ReadScope"];
+                        WriteLine($"Service: ReadScope: {acceptedScopes}");
+                        policy.Requirements.Add(new ScopesRequirement(acceptedScopes));
+                    });
             });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            WriteLine($"Configure Service: begin {nameof(StartupBlazorServerAADClientCallWebAPI)}");
             if (env.IsDevelopment())
             {
                 // Since IdentityModel version 5.2.1 (or since Microsoft.AspNetCore.Authentication.JwtBearer version 2.2.0),

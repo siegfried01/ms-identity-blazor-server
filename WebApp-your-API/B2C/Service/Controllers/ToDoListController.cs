@@ -23,6 +23,7 @@ namespace TodoListService.Controllers
 
         // GET: api/values
         [HttpGet]
+        [Authorize(Policy = "ReadScope")]
         public IEnumerable<ToDo> Get()
         {
             string owner = User.Identity.Name;
@@ -31,12 +32,14 @@ namespace TodoListService.Controllers
 
         // GET: api/values
         [HttpGet("{id}", Name = "Get")]
+        [Authorize(Policy = "ReadScope")]
         public ToDo Get(int id)
         {
             return TodoStore.Values.FirstOrDefault(t => t.Id == id);
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "ReadScope")]
         public void Delete(int id)
         {
             TodoStore.Remove(id);
@@ -44,6 +47,7 @@ namespace TodoListService.Controllers
 
         // POST api/values
         [HttpPost]
+        [Authorize(Policy = "ReadScope")]
         public IActionResult Post([FromBody] ToDo todo)
         {
             int id = 1;
@@ -59,6 +63,7 @@ namespace TodoListService.Controllers
 
         // PATCH api/values
         [HttpPatch("{id}")]
+        [Authorize(Policy = "ReadScope")]
         public IActionResult Patch(int id, [FromBody] ToDo todo)
         {
             if (id != todo.Id)
